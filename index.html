@@ -13,6 +13,61 @@
         color: white;
         touch-action: manipulation;
       }
+      .parent-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        pointer-events: none;
+        z-index: 0;
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(10, 132, 255, 0.9)
+        );
+        opacity: 0.2;
+        transition: opacity 0.05s linear;
+      }
+
+      .parent-loading-overlay.reverse {
+        background: linear-gradient(
+          to left,
+          transparent,
+          rgba(10, 132, 255, 0.9)
+        );
+      }
+
+      .parent-loading-overlay.remove {
+        background: linear-gradient(
+          to left,
+          transparent,
+          rgba(255, 59, 48, 0.9)
+        );
+      }
+
+      .parent-loading-overlay.remove.reverse {
+        background: linear-gradient(
+          to right,
+          transparent,
+          rgba(255, 59, 48, 0.9)
+        );
+      }
+      /* Ripple gradient effect for delivery buttons */
+      @keyframes ripple-effect {
+        0% {
+          transform: scale(0);
+          opacity: 0.5;
+        }
+        50% {
+          transform: scale(2.5);
+          opacity: 0.3;
+        }
+        100% {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
       header {
         display: flex;
         justify-content: space-between;
@@ -43,9 +98,11 @@
         width: 100%;
         height: 100%;
         background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
         align-items: center;
+        z-index: 1000;
       }
       .modal-content {
         background: #2c2c2e;
@@ -54,6 +111,29 @@
         width: 90%;
         max-width: 400px;
         color: white;
+        position: relative;
+        z-index: 1001;
+      }
+      body.modal-open {
+        overflow: hidden;
+      }
+      .hold-btn .progress-ring {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .hold-btn .progress-ring circle {
+        stroke: white;
+        stroke-width: 4;
+        fill: none;
+        stroke-dasharray: 283;
+        stroke-dashoffset: 283;
+        transition: stroke-dashoffset 0.05s linear;
       }
     </style>
   </head>
@@ -450,10 +530,52 @@
           extra: shiftData.extra || 0,
           additional: shiftData.additional || 0,
         });
+        // Use deliveryTimes as array of Date objects (for each delivery event)
+        const [deliveryTimes, setDeliveryTimes] = useState(() => {
+          // Initialize from shiftData.latestDeliveryTimes, converting to Date objects if present
+          if (
+            shiftData.latestDeliveryTimes &&
+            Array.isArray(shiftData.latestDeliveryTimes)
+          ) {
+            return shiftData.latestDeliveryTimes.map((t) => new Date(t));
+          }
+          return [];
+        });
+        // Current time for calculations
+        const [currentTime, setCurrentTime] = useState(new Date());
+        useEffect(() => {
+          const interval = setInterval(() => {
+            setCurrentTime(new Date());
+          }, 1000);
+          return () => clearInterval(interval);
+        }, []);
+        // Get latest delivery time from deliveryTimes array
+        const latestDeliveryTime =
+          deliveryTimes.length > 0
+            ? deliveryTimes[deliveryTimes.length - 1]
+            : null;
+        // Calculate time ago string for latest delivery
+        const calculateTimeAgo = (time) => {
+          if (!time) return "N/A";
+          if (!(time instanceof Date) || isNaN(time)) return "N/A";
+          const diffInSeconds = Math.floor((currentTime - time) / 1000);
+          if (diffInSeconds < 0) return "N/A";
+          const hours = Math.floor(diffInSeconds / 3600);
+          const minutes = Math.floor((diffInSeconds % 3600) / 60);
+          const seconds = diffInSeconds % 60;
+          let timeAgo = "";
+          if (hours > 0) timeAgo += `${hours} hour${hours !== 1 ? "s" : ""} `;
+          if (minutes > 0)
+            timeAgo += `${minutes} minute${minutes !== 1 ? "s" : ""} `;
+          timeAgo += `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
+          return timeAgo;
+        };
+        const latestDeliveryTimeAgo = latestDeliveryTime
+          ? calculateTimeAgo(latestDeliveryTime)
+          : "N/A";
         const [startTime] = useState(
           new Date(shiftData.startTime || Date.now())
         );
-        const [currentTime, setCurrentTime] = useState(new Date());
         const [notes, setNotes] = useState(shiftData.notes || "");
         // Notes modal state
         const [showNotesModal, setShowNotesModal] = useState(false);
@@ -470,35 +592,33 @@
         // State for modals
         const [showMileageModal, setShowMileageModal] = useState(false);
         const [showEndModal, setShowEndModal] = useState(false);
-
-        useEffect(() => {
-          // Update every second to show live running time
-          const interval = setInterval(() => {
-            setCurrentTime(new Date());
-          }, 1000);
-
-          return () => clearInterval(interval);
-        }, []);
-
         useEffect(() => {
           if (shiftData.isClockedIn) {
             localStorage.setItem("currentShift", JSON.stringify(shiftData));
           }
         }, [shiftData]);
 
+        // Modal open/close: Prevent background scroll and proper layering
+        useEffect(() => {
+          const modalVisible =
+            showNotesModal || showMileageModal || showEndModal;
+          if (modalVisible) {
+            document.body.classList.add("modal-open");
+          } else {
+            document.body.classList.remove("modal-open");
+          }
+        }, [showNotesModal, showMileageModal, showEndModal]);
         // Calculate the total delivery earnings
         const deliveryEarnings = (counts) => {
           const perDelivery = parseFloat(settings.perDelivery || 0);
           const perExtra = parseFloat(settings.perExtra || 0);
           const perAdditional = parseFloat(settings.perAdditional || 0);
-
           return (
             counts.standard * perDelivery +
             counts.extra * perExtra +
             counts.additional * perAdditional
           ).toFixed(2);
         };
-
         // Calculate wage based on start time and end time (current time for ongoing shifts)
         const calculateWage = () => {
           const secondsElapsed = Math.floor((currentTime - startTime) / 1000);
@@ -507,46 +627,161 @@
             (minutesElapsed / 60) * parseFloat(settings.hourlyRate || 0);
           return isNaN(calculatedWage) ? 0 : calculatedWage.toFixed(2);
         };
-
         // Helper function to calculate elapsed time (hours, minutes, seconds)
         const calculateTimeElapsed = () => {
-          const secondsElapsed = Math.floor((currentTime - startTime) / 1000); // Get the time difference in seconds
-          const hours = Math.floor(secondsElapsed / 3600); // Calculate hours
-          const minutes = Math.floor((secondsElapsed % 3600) / 60); // Calculate minutes
-          const seconds = secondsElapsed % 60; // Calculate seconds
+          const secondsElapsed = Math.floor((currentTime - startTime) / 1000);
+          const hours = Math.floor(secondsElapsed / 3600);
+          const minutes = Math.floor((secondsElapsed % 3600) / 60);
+          const seconds = secondsElapsed % 60;
           return { hours, minutes, seconds };
         };
-
-        const { hours, minutes, seconds } = calculateTimeElapsed(); // Get the elapsed time
-
+        const { hours, minutes, seconds } = calculateTimeElapsed();
         const validWage = calculateWage();
-
         const totalDelivery = deliveryEarnings(counts);
         const totalEarned = (
           parseFloat(validWage) + parseFloat(totalDelivery)
         ).toFixed(2);
-
         // For displaying delivery total in the UI (variable used in JSX)
         const deliveryTotal = totalDelivery;
+        // --- Hold-to-trigger state and logic for delivery buttons ---
+        const [holdState, setHoldState] = useState({
+          isHolding: false,
+          timer: null,
+          type: null,
+          action: null, // 'add' or 'remove'
+          progress: 0,
+          completed: false,
+          gradient: null, // 'add' or 'remove' for animation
+          clickX: null,
+          clickY: null,
+        });
+        const holdIntervalRef = React.useRef();
+        const holdTimeoutRef = React.useRef();
+        // Helper: start holding for a button
+        const handleButtonHoldStart = (type, action, event) => {
+          // Only allow one hold at a time
+          if (holdState.isHolding) return;
+          let clickX = null;
+          let clickY = null;
+          if (
+            event &&
+            event.currentTarget &&
+            event.clientX != null &&
+            event.clientY != null
+          ) {
+            const rect =
+              event.currentTarget.parentElement.getBoundingClientRect();
+            clickX = event.clientX - rect.left;
+            clickY = event.clientY - rect.top;
+          }
+          setHoldState({
+            isHolding: true,
+            timer: null,
+            type,
+            action,
+            progress: 0,
+            completed: false,
+            gradient: null,
+            clickX,
+            clickY,
+          });
+          // Animate progress bar (update every 50ms)
+          let elapsed = 0;
+          holdIntervalRef.current = setInterval(() => {
+            elapsed += 50;
+            setHoldState((prev) => {
+              if (!prev.isHolding) return prev;
+              return { ...prev, progress: Math.min(elapsed / 3000, 1) };
+            });
+          }, 50);
+          // After 3 seconds, trigger the action
+          holdTimeoutRef.current = setTimeout(() => {
+            setHoldState((prev) => ({
+              ...prev,
+              completed: true,
+              isHolding: false,
+              progress: 1,
+              gradient: action,
+            }));
+            // Actually adjust the count
+            handleAdjust(type, action === "add" ? 1 : -1, true /*fromHold*/);
+            setTimeout(() => {
+              setHoldState((prev) =>
+                prev.gradient === action ? { ...prev, gradient: null } : prev
+              );
+            }, 700);
+          }, 3000);
+        };
+        // Helper: cancel hold if released early, with reverse animation
+        const handleButtonHoldEnd = () => {
+          clearInterval(holdIntervalRef.current);
+          clearTimeout(holdTimeoutRef.current);
 
-        const handleAdjust = (type, delta) => {
-          if (delta === -1 && counts[type] > 0) {
+          if (holdState.progress < 1) {
+            let reverseProgress = holdState.progress;
+            const reverseInterval = setInterval(() => {
+              reverseProgress -= 0.05;
+              if (reverseProgress <= 0) {
+                clearInterval(reverseInterval);
+                setHoldState((prev) => ({
+                  ...prev,
+                  isHolding: false,
+                  progress: 0,
+                  type: null,
+                  action: null,
+                  completed: false,
+                  reversing: false,
+                }));
+              } else {
+                setHoldState((prev) => ({
+                  ...prev,
+                  progress: reverseProgress,
+                  reversing: true,
+                }));
+              }
+            }, 25);
+          } else {
+            setHoldState((prev) => ({
+              ...prev,
+              isHolding: false,
+              progress: 0,
+              type: null,
+              action: null,
+              completed: false,
+              reversing: false,
+            }));
+          }
+        };
+        // --- End hold-to-trigger logic ---
+        // Track delivery times for each delivery added/removed
+        // Accepts fromHold for skipping confirm dialog on -1
+        const handleAdjust = (type, delta, fromHold) => {
+          if (delta === -1 && counts[type] > 0 && !fromHold) {
             const confirmRemoval = window.confirm(
               `Are you sure you want to remove one ${type} delivery?`
             );
             if (!confirmRemoval) return;
           }
-
           const newCounts = {
             ...counts,
             [type]: Math.max(0, counts[type] + delta),
           };
+          let newDeliveryTimes;
+          if (delta === 1) {
+            newDeliveryTimes = [...deliveryTimes, new Date()];
+          } else if (delta === -1 && deliveryTimes.length > 0) {
+            newDeliveryTimes = deliveryTimes.slice(0, -1);
+          } else {
+            newDeliveryTimes = deliveryTimes;
+          }
           setCounts(newCounts);
+          setDeliveryTimes(newDeliveryTimes);
           setShiftData({
             ...shiftData,
             standard: newCounts.standard,
             extra: newCounts.extra,
             additional: newCounts.additional,
+            latestDeliveryTimes: newDeliveryTimes,
           });
         };
 
@@ -583,6 +818,9 @@
               perExtra: settings.perExtra,
               perAdditional: settings.perAdditional,
             },
+            latestDeliveryTime: latestDeliveryTime
+              ? latestDeliveryTime.toISOString()
+              : "N/A",
           };
 
           const history = JSON.parse(localStorage.getItem("shifts") || "[]");
@@ -601,6 +839,7 @@
             notes: "",
             currentMileage: "",
             totalMiles: null,
+            latestDeliveryTimes: [],
           });
 
           setPage("home");
@@ -639,6 +878,9 @@
               perExtra: settings.perExtra,
               perAdditional: settings.perAdditional,
             },
+            latestDeliveryTime: latestDeliveryTime
+              ? latestDeliveryTime.toISOString()
+              : "N/A",
           };
 
           const shiftHistory = JSON.parse(
@@ -659,6 +901,7 @@
             notes: "",
             currentMileage: "",
             totalMiles: null,
+            latestDeliveryTimes: [],
           });
 
           setPage("home");
@@ -746,10 +989,103 @@
                     £{totalEarned}
                   </div>
                 </div>
+                {/* Latest Delivery Section: moved after Total Earnings, before Standard Deliveries */}
+                <div
+                  style={{
+                    flex: "1 1 100%",
+                    background: "#2c2c2e",
+                    borderRadius: "8px",
+                    marginTop: "0.75rem",
+                    padding: "0.75rem",
+                    color: "#fff",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <strong>Latest Delivery:</strong>
+                  <div
+                    style={{
+                      marginTop: "0.25rem",
+                      fontSize: "1.1rem",
+                      fontWeight: "normal",
+                      opacity: 0.85,
+                    }}
+                  >
+                    {latestDeliveryTimeAgo}
+                  </div>
+                </div>
               </div>
             </section>
 
             {/* Adjust Delivery Counts */}
+            <style>
+              {`
+              .hold-btn {
+                position: relative;
+                overflow: hidden;
+                border: none;
+                border-radius: 8px;
+                font-size: 1.25rem;
+                min-width: 48px;
+                padding: 0.5rem 1.2rem;
+                color: white;
+                cursor: pointer;
+                outline: none;
+                background-color: #0a84ff;
+                z-index: 1;
+                perspective: 800px;
+                transform-style: preserve-3d;
+                transition: transform 0.6s ease, background 0.1s linear, box-shadow 0.15s ease-out;
+              }
+              .hold-btn.remove {
+                background-color: #ff3b30;
+              }
+              .hold-btn.hold-progress {
+                /* Removed transform scaling */
+              }
+              .hold-btn.pressed {
+                box-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.5);
+                transition: box-shadow 0.15s ease-out;
+              }
+              .hold-btn .progress-bar {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                height: 5px;
+                background: linear-gradient(90deg, #0f0, #0a84ff);
+                border-radius: 0 0 8px 8px;
+                z-index: 2;
+                pointer-events: none;
+                transition: width 0.05s linear;
+              }
+              .hold-btn.remove .progress-bar {
+                background: linear-gradient(90deg, #ff3b30, #ff9c8c);
+              }
+              .hold-btn .radial-gradient-effect {
+                position: absolute;
+                top: 50%; left: 50%;
+                width: 300%;
+                height: 300%;
+                pointer-events: none;
+                transform: translate(-50%, -50%);
+                border-radius: 50%;
+                opacity: 0.6;
+                animation: radial-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+                z-index: 5;
+              }
+              .hold-btn .radial-gradient-effect.add {
+                background: radial-gradient(circle, #2fff8a 0%, #0a84ff 80%, transparent 100%);
+              }
+              .hold-btn .radial-gradient-effect.remove {
+                background: radial-gradient(circle, #ff3b30 0%, #ff9c8c 80%, transparent 100%);
+              }
+              @keyframes radial-pop {
+                0% { opacity: 0.7; transform: translate(-50%, -50%) scale(0.7);}
+                60% { opacity: 0.8; }
+                90% { opacity: 0.3; }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7);}
+              }
+              `}
+            </style>
             <section
               style={{
                 display: "flex",
@@ -762,11 +1098,83 @@
                 <div
                   key={type}
                   style={{
+                    position: "relative",
+                    overflow: "hidden",
                     padding: "1rem",
                     background: "#2c2c2e",
                     borderRadius: "8px",
                   }}
                 >
+                  {holdState.gradient === "add" && holdState.type === type && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top:
+                          holdState.clickY != null
+                            ? holdState.clickY + "px"
+                            : "50%",
+                        left:
+                          holdState.clickX != null
+                            ? holdState.clickX + "px"
+                            : "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: "0",
+                        height: "0",
+                        borderRadius: "50%",
+                        background:
+                          "radial-gradient(circle, #2fff8a 0%, transparent 80%)",
+                        animation: "ripple-effect 0.7s forwards",
+                        pointerEvents: "none",
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+                  {holdState.gradient === "remove" &&
+                    holdState.type === type && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top:
+                            holdState.clickY != null
+                              ? holdState.clickY + "px"
+                              : "50%",
+                          left:
+                            holdState.clickX != null
+                              ? holdState.clickX + "px"
+                              : "50%",
+                          transform: "translate(-50%, -50%)",
+                          width: "0",
+                          height: "0",
+                          borderRadius: "50%",
+                          background:
+                            "radial-gradient(circle, #ff3b30 0%, transparent 80%)",
+                          animation: "ripple-effect 0.7s forwards",
+                          pointerEvents: "none",
+                          zIndex: 1,
+                        }}
+                      />
+                    )}
+                  {/* Parent loading overlay */}
+                  {holdState.isHolding && holdState.type === type && (
+                    <div
+                      className={
+                        "parent-loading-overlay" +
+                        (holdState.action === "remove" ? " remove" : "") +
+                        (holdState.reversing ? " reverse" : "")
+                      }
+                      style={{
+                        opacity: holdState.progress,
+                        clipPath:
+                          holdState.action === "add"
+                            ? `inset(0% ${
+                                100 - holdState.progress * 100
+                              }% 0% 0%)`
+                            : `inset(0% 0% 0% ${
+                                100 - holdState.progress * 100
+                              }%)`,
+                      }}
+                    />
+                  )}
                   <div
                     style={{
                       fontWeight: "bold",
@@ -783,39 +1191,87 @@
                       justifyContent: "space-between",
                     }}
                   >
+                    {/* Remove button */}
                     <button
-                      onClick={() => handleAdjust(type, -1)}
-                      style={{
-                        padding: "0.5rem 1rem",
-                        borderRadius: "8px",
-                        fontSize: "1.25rem",
-                        border: "none",
-                        backgroundColor: "#0a84ff",
-                        color: "white",
-                        cursor: "pointer",
-                        minWidth: "48px",
-                        textAlign: "center",
+                      type="button"
+                      className={
+                        "hold-btn remove" +
+                        (holdState.isHolding &&
+                        holdState.type === type &&
+                        holdState.action === "remove"
+                          ? " hold-progress pressed"
+                          : "")
+                      }
+                      onMouseDown={(e) =>
+                        handleButtonHoldStart(type, "remove", e)
+                      }
+                      onMouseUp={handleButtonHoldEnd}
+                      onMouseLeave={handleButtonHoldEnd}
+                      onTouchStart={(e) => {
+                        e.preventDefault();
+                        handleButtonHoldStart(type, "remove", e.touches[0]);
                       }}
+                      onTouchEnd={handleButtonHoldEnd}
+                      style={{
+                        userSelect: "none",
+                        WebkitUserSelect: "none",
+                        MozUserSelect: "none",
+                        msUserSelect: "none",
+                      }}
+                      aria-label={`Remove ${type} delivery`}
                     >
-                      −
+                      −{/* Radial effect */}
+                      {holdState.gradient === "remove" &&
+                        holdState.type === type && (
+                          <div className="radial-gradient-effect remove" />
+                        )}
                     </button>
                     <div style={{ fontSize: "1.5rem" }}>{counts[type]}</div>
+                    {/* Add button */}
                     <button
-                      onClick={() => handleAdjust(type, 1)}
-                      style={{
-                        padding: "0.5rem 1rem",
-                        borderRadius: "8px",
-                        fontSize: "1.25rem",
-                        border: "none",
-                        backgroundColor: "#0a84ff",
-                        color: "white",
-                        cursor: "pointer",
-                        minWidth: "48px",
-                        textAlign: "center",
+                      type="button"
+                      className={
+                        "hold-btn" +
+                        (holdState.isHolding &&
+                        holdState.type === type &&
+                        holdState.action === "add"
+                          ? " hold-progress pressed"
+                          : "")
+                      }
+                      onMouseDown={(e) => handleButtonHoldStart(type, "add", e)}
+                      onMouseUp={handleButtonHoldEnd}
+                      onMouseLeave={handleButtonHoldEnd}
+                      onTouchStart={(e) => {
+                        e.preventDefault();
+                        handleButtonHoldStart(type, "add", e.touches[0]);
                       }}
+                      onTouchEnd={handleButtonHoldEnd}
+                      style={{
+                        userSelect: "none",
+                        WebkitUserSelect: "none",
+                        MozUserSelect: "none",
+                        msUserSelect: "none",
+                      }}
+                      aria-label={`Add ${type} delivery`}
                     >
-                      ＋
+                      ＋{/* Radial effect */}
+                      {holdState.gradient === "add" &&
+                        holdState.type === type && (
+                          <div className="radial-gradient-effect add" />
+                        )}
                     </button>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "0.92rem",
+                      color: "#bbb",
+                      marginTop: "0.35rem",
+                      fontStyle: "italic",
+                      textAlign: "center",
+                    }}
+                  >
+                    Hold for 3 seconds to{" "}
+                    {type === "standard" ? "add/remove" : "adjust"} deliveries.
                   </div>
                 </div>
               ))}
@@ -961,23 +1417,68 @@
             {/* Mileage Modal */}
             {showMileageModal && (
               <div className="modal">
-                <div className="modal-content">
-                  <h3 style={{ textAlign: "center" }}>Confirm Mileage</h3>
-                  <p>Current Mileage: {currentMileage}</p>
-                  <button
-                    className="button"
-                    onClick={handleMileageConfirm}
-                    style={{ backgroundColor: "#0a84ff" }}
-                  >
+                <div
+                  className="modal-content"
+                  style={{ padding: "2rem", textAlign: "center" }}
+                >
+                  <h2 style={{ marginBottom: "1rem", fontSize: "1.5rem" }}>
                     Confirm Mileage
-                  </button>
-                  <button
-                    className="button"
-                    onClick={cancelEndShift}
-                    style={{ backgroundColor: "#ff3b30" }}
+                  </h2>
+                  <p
+                    style={{
+                      fontSize: "1.2rem",
+                      color: "#ccc",
+                      marginBottom: "2rem",
+                    }}
                   >
-                    Cancel
-                  </button>
+                    Please confirm your current mileage by entering the latest
+                    reading from your car's odometer.
+                  </p>
+                  <div
+                    style={{
+                      background: "#1c1c1e",
+                      padding: "1rem",
+                      borderRadius: "8px",
+                      marginBottom: "2rem",
+                      fontSize: "1.3rem",
+                      color: "white",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Current Mileage: {currentMileage}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "1rem",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <button
+                      className="button"
+                      onClick={handleMileageConfirm}
+                      style={{
+                        backgroundColor: "#0a84ff",
+                        flex: 1,
+                        padding: "0.75rem",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      className="button"
+                      onClick={cancelEndShift}
+                      style={{
+                        backgroundColor: "#ff3b30",
+                        flex: 1,
+                        padding: "0.75rem",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1449,6 +1950,37 @@
           setFiltered(history); // Show all records again
         };
 
+        const labelStyle = {
+          display: "flex",
+          flexDirection: "column",
+          marginBottom: "1rem",
+          color: "#bbb",
+          fontSize: "1rem",
+        };
+
+        const inputStyle = {
+          marginTop: "0.5rem",
+          padding: "0.75rem",
+          fontSize: "1rem",
+          borderRadius: "8px",
+          border: "none",
+          background: "#2c2c2e",
+          color: "white",
+        };
+
+        const textareaStyle = {
+          ...inputStyle,
+          minHeight: "100px",
+          resize: "vertical",
+        };
+
+        const groupBoxStyle = {
+          background: "#3a3a3c",
+          borderRadius: "8px",
+          padding: "1rem",
+          marginBottom: "1rem",
+        };
+
         return (
           <main style={{ padding: "1.5rem", paddingBottom: "80px" }}>
             <h3 style={{ marginBottom: "1.25rem", textAlign: "center" }}>
@@ -1684,106 +2216,108 @@
               ))
             )}
 
-            {/* Edit Shift Modal */}
             {editShift && (
               <div className="modal">
                 <div
                   className="modal-content"
                   style={{
-                    maxWidth: "600px",
+                    maxWidth: "400px",
                     padding: "1rem",
                     background: "#2c2c2e",
                     borderRadius: "10px",
                     color: "#fff",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
                   }}
                 >
                   <h3
                     style={{
                       textAlign: "center",
-                      marginBottom: "1.5rem",
-                      color: "#fff",
+                      marginBottom: "0.5rem",
+                      fontSize: "1.25rem",
                     }}
                   >
                     Edit Shift
                   </h3>
 
-                  <div
+                  {/* Start Time */}
+                  <label
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: "1rem",
+                      marginBottom: "0.5rem",
+                      color: "#bbb",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    Start Time:
+                    <input
+                      type="datetime-local"
+                      value={editShift.startTime.slice(0, 16)}
+                      onChange={(e) =>
+                        setEditShift({
+                          ...editShift,
+                          startTime: e.target.value,
+                        })
+                      }
+                      style={{
+                        marginTop: "0.3rem",
+                        padding: "0.5rem",
+                        fontSize: "0.95rem",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#2c2c2e",
+                        color: "white",
+                      }}
+                    />
+                  </label>
+
+                  {/* End Time */}
+                  <label
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      marginBottom: "0.5rem",
+                      color: "#bbb",
+                      fontSize: "0.95rem",
+                    }}
+                  >
+                    End Time:
+                    <input
+                      type="datetime-local"
+                      value={editShift.endTime.slice(0, 16)}
+                      onChange={(e) =>
+                        setEditShift({ ...editShift, endTime: e.target.value })
+                      }
+                      style={{
+                        marginTop: "0.3rem",
+                        padding: "0.5rem",
+                        fontSize: "0.95rem",
+                        borderRadius: "6px",
+                        border: "none",
+                        background: "#2c2c2e",
+                        color: "white",
+                      }}
+                    />
+                  </label>
+
+                  {/* Deliveries Group */}
+                  <div
+                    style={{
                       background: "#3a3a3c",
-                      borderRadius: "8px",
-                      padding: "1rem",
-                      marginBottom: "1rem",
+                      borderRadius: "6px",
+                      padding: "0.75rem",
+                      marginBottom: "0.75rem",
                     }}
                   >
                     <label
                       style={{
-                        color: "#bbb",
-                        fontSize: "1rem",
                         display: "flex",
                         flexDirection: "column",
-                      }}
-                    >
-                      Start Time:
-                      <input
-                        type="text"
-                        value={editShift.startTime}
-                        onChange={(e) =>
-                          setEditShift({
-                            ...editShift,
-                            startTime: e.target.value,
-                          })
-                        }
-                        style={{
-                          marginTop: "0.5rem",
-                          padding: "0.75rem",
-                          fontSize: "1rem",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#2c2c2e",
-                          color: "white",
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{
+                        marginBottom: "0.5rem",
                         color: "#bbb",
-                        fontSize: "1rem",
-                        display: "flex",
-                        flexDirection: "column",
-                      }}
-                    >
-                      End Time:
-                      <input
-                        type="text"
-                        value={editShift.endTime}
-                        onChange={(e) =>
-                          setEditShift({
-                            ...editShift,
-                            endTime: e.target.value,
-                          })
-                        }
-                        style={{
-                          marginTop: "0.5rem",
-                          padding: "0.75rem",
-                          fontSize: "1rem",
-                          borderRadius: "8px",
-                          border: "none",
-                          background: "#2c2c2e",
-                          color: "white",
-                        }}
-                      />
-                    </label>
-
-                    <label
-                      style={{
-                        color: "#bbb",
-                        fontSize: "1rem",
-                        display: "flex",
-                        flexDirection: "column",
+                        fontSize: "0.95rem",
                       }}
                     >
                       Standard Deliveries:
@@ -1797,10 +2331,10 @@
                           })
                         }
                         style={{
-                          marginTop: "0.5rem",
-                          padding: "0.75rem",
-                          fontSize: "1rem",
-                          borderRadius: "8px",
+                          marginTop: "0.3rem",
+                          padding: "0.5rem",
+                          fontSize: "0.95rem",
+                          borderRadius: "6px",
                           border: "none",
                           background: "#2c2c2e",
                           color: "white",
@@ -1810,10 +2344,11 @@
 
                     <label
                       style={{
-                        color: "#bbb",
-                        fontSize: "1rem",
                         display: "flex",
                         flexDirection: "column",
+                        marginBottom: "0.5rem",
+                        color: "#bbb",
+                        fontSize: "0.95rem",
                       }}
                     >
                       Extra Deliveries:
@@ -1827,10 +2362,10 @@
                           })
                         }
                         style={{
-                          marginTop: "0.5rem",
-                          padding: "0.75rem",
-                          fontSize: "1rem",
-                          borderRadius: "8px",
+                          marginTop: "0.3rem",
+                          padding: "0.5rem",
+                          fontSize: "0.95rem",
+                          borderRadius: "6px",
                           border: "none",
                           background: "#2c2c2e",
                           color: "white",
@@ -1840,10 +2375,11 @@
 
                     <label
                       style={{
-                        color: "#bbb",
-                        fontSize: "1rem",
                         display: "flex",
                         flexDirection: "column",
+                        marginBottom: "0.5rem",
+                        color: "#bbb",
+                        fontSize: "0.95rem",
                       }}
                     >
                       Additional Deliveries:
@@ -1857,10 +2393,10 @@
                           })
                         }
                         style={{
-                          marginTop: "0.5rem",
-                          padding: "0.75rem",
-                          fontSize: "1rem",
-                          borderRadius: "8px",
+                          marginTop: "0.3rem",
+                          padding: "0.5rem",
+                          fontSize: "0.95rem",
+                          borderRadius: "6px",
                           border: "none",
                           background: "#2c2c2e",
                           color: "white",
@@ -1869,43 +2405,63 @@
                     </label>
                   </div>
 
+                  {/* Miles Group */}
                   <div
                     style={{
-                      display: "flex",
-                      gap: "1rem",
-                      justifyContent: "space-between",
-                      marginTop: "1rem",
+                      background: "#3a3a3c",
+                      borderRadius: "6px",
+                      padding: "0.75rem",
+                      marginBottom: "0.75rem",
                     }}
                   >
-                    <button
-                      onClick={handleSaveEdit}
-                      className="button"
+                    <label
                       style={{
-                        backgroundColor: "#0a84ff",
-                        color: "white",
-                        padding: "1rem",
-                        fontSize: "1rem",
-                        borderRadius: "8px",
-                        border: "none",
-                        flex: 1,
-                        cursor: "pointer",
+                        display: "flex",
+                        flexDirection: "column",
+                        marginBottom: "0.5rem",
+                        color: "#bbb",
+                        fontSize: "0.95rem",
                       }}
+                    >
+                      Miles Driven:
+                      <input
+                        type="number"
+                        value={editShift.miles}
+                        onChange={(e) =>
+                          setEditShift({ ...editShift, miles: e.target.value })
+                        }
+                        style={inputStyle}
+                      />
+                    </label>
+                  </div>
+
+                  {/* Notes */}
+                  <label style={labelStyle}>
+                    Notes:
+                    <textarea
+                      value={editShift.notes}
+                      onChange={(e) =>
+                        setEditShift({ ...editShift, notes: e.target.value })
+                      }
+                      style={textareaStyle}
+                    />
+                  </label>
+
+                  {/* Buttons */}
+                  <div
+                    style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}
+                  >
+                    <button
+                      className="button"
+                      style={{ flex: 1, background: "#0a84ff" }}
+                      onClick={handleSaveEdit}
                     >
                       Save
                     </button>
                     <button
+                      className="button"
+                      style={{ flex: 1, background: "#ff3b30" }}
                       onClick={handleCancelEdit}
-                      className="button danger"
-                      style={{
-                        backgroundColor: "#ff3b30",
-                        color: "white",
-                        padding: "1rem",
-                        fontSize: "1rem",
-                        borderRadius: "8px",
-                        border: "none",
-                        flex: 1,
-                        cursor: "pointer",
-                      }}
                     >
                       Cancel
                     </button>
