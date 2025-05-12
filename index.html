@@ -471,81 +471,102 @@
           shiftData.startMileage || ""
         );
 
-        // Save the start mileage without starting the shift
-        const handleSaveMileage = () => {
-          if (!startMileage) {
-            alert("Please enter your start mileage.");
-            return;
-          }
-
-          setShiftData({
-            ...shiftData,
-            startMileage,
-            isClockedIn: false, // Shift not started yet
-            startTime: null, // Ensure start time is null until clocked in
-          });
-
-          alert("Start mileage saved.");
-        };
-
-        // Start the shift by setting the start time and marking the shift as clocked in
-        const handleClockIn = () => {
-          if (!startMileage) {
-            alert("Please enter your start mileage before clocking in.");
-            return;
-          }
-
-          const startTime = new Date();
-
-          // Once clocked in, save the start time and clock-in status
-          setShiftData({
-            ...shiftData,
-            isClockedIn: true,
-            startTime,
-          });
-
-          setPage("shift"); // Navigate to shift page after clocking in
-        };
-
         return (
-          <main style={{ padding: "1.5rem" }}>
-            <h3 style={{ textAlign: "center" }}>Start Shift</h3>
-
-            {/* Input to enter start mileage */}
-            <div>
-              <label>
-                Start Mileage:
-                <input
-                  type="number"
-                  value={startMileage}
-                  onChange={(e) => setStartMileage(e.target.value)}
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#2c2c2e",
-                    color: "white",
-                    fontSize: "1rem",
-                  }}
-                />
-              </label>
-            </div>
-
-            {/* Button to save start mileage */}
-            <button className="button" onClick={handleSaveMileage}>
-              Save Start Mileage
-            </button>
-
-            {/* Button to clock in and start the shift */}
-            <button
-              className="button"
-              onClick={handleClockIn}
-              style={{ marginTop: "1rem" }}
-              disabled={!startMileage} // Disable clock-in if no mileage is saved
+          <main
+            style={{
+              padding: "2rem",
+              maxWidth: "420px",
+              margin: "0 auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "2rem",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "2rem",
+                color: "#ffffff",
+                fontWeight: "700",
+                textAlign: "center",
+              }}
             >
-              Clock In
-            </button>
+              Ready to Start Your Shift?
+            </h2>
+            {/* Card for mileage input */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #333, #222)",
+                padding: "1.5rem",
+                borderRadius: "16px",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+                width: "100%",
+              }}
+            >
+              <label
+                style={{
+                  fontSize: "1rem",
+                  color: "#ccc",
+                  marginBottom: "0.5rem",
+                  display: "block",
+                }}
+              >
+                Enter Start Mileage
+              </label>
+              <input
+                type="number"
+                value={startMileage}
+                onChange={(e) => setStartMileage(e.target.value)}
+                placeholder="e.g., 12345"
+                style={{
+                  padding: "0.75rem 1rem",
+                  fontSize: "1rem",
+                  borderRadius: "10px",
+                  border: "1px solid #444",
+                  background: "#1f1f1f",
+                  color: "#fff",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  marginTop: "0.5rem",
+                }}
+              />
+            </div>
+            {/* Action button group */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "1rem",
+                width: "100%",
+              }}
+            >
+              <button
+                onClick={() => {
+                  if (!startMileage) return;
+                  setShiftData({
+                    ...shiftData,
+                    startMileage,
+                    isClockedIn: true,
+                    startTime: new Date(),
+                  });
+                  setPage("shift");
+                }}
+                style={{
+                  backgroundColor: startMileage ? "#34c759" : "#666",
+                  padding: "0.75rem",
+                  fontSize: "1.1rem",
+                  borderRadius: "10px",
+                  border: "none",
+                  color: "#fff",
+                  fontWeight: "bold",
+                  cursor: startMileage ? "pointer" : "not-allowed",
+                  transition: "transform 0.1s ease-in-out",
+                }}
+                disabled={!startMileage}
+              >
+                Clock In &amp; Go
+              </button>
+            </div>
           </main>
         );
       }
@@ -1127,7 +1148,14 @@
                     position: "relative",
                     overflow: "hidden",
                     padding: "1rem",
-                    background: "#2c2c2e",
+                    background:
+                      holdState.gradient === "add" && holdState.type === type
+                        ? "rgb(46, 125, 50)"
+                        : holdState.gradient === "remove" &&
+                          holdState.type === type
+                        ? "rgb(155, 32, 32)"
+                        : "#2c2c2e",
+                    transition: "background 0.15s ease",
                     borderRadius: "8px",
                   }}
                 >
