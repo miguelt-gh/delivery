@@ -41,6 +41,36 @@
           #070a0f 100%
         );
       }
+      .hidden {
+        display: none !important;
+      }
+      /* Print-only area (avoids popups/iframes on mobile) */
+      #print-area {
+        display: none;
+      }
+
+      @media print {
+        body {
+          background: #fff !important;
+          color: #000 !important;
+        }
+        .app,
+        .sticky-bar {
+          display: none !important;
+        }
+        #print-area {
+          display: block !important;
+        }
+      }
+
+      body.printing .app,
+      body.printing .sticky-bar {
+        display: none !important;
+      }
+
+      body.printing #print-area {
+        display: block !important;
+      }
       .app {
         max-width: 1060px;
         margin: 0 auto;
@@ -876,6 +906,7 @@
       </section>
     </div>
 
+    <div id="print-area" class="hidden" aria-hidden="true"></div>
     <div class="sticky-bar">
       <div class="sticky-inner">
         <div class="left">
@@ -1545,7 +1576,7 @@
           };
         };
 
-        const buildPrintHtml = (rows) => {
+        const buildPrintMarkup = (rows) => {
           const title = job?.name ? esc(job.name) : "Job";
           const today = new Date();
           const dateStr = today.toLocaleDateString(undefined, {
@@ -1557,54 +1588,42 @@
           const tr = rows
             .map(
               (r) => `
-      <tr>
-        <td>${esc(r.blindNo || "")}</td>
-        <td style="text-align:right">${fmt(r.width)}</td>
-        <td style="text-align:right">${fmt(r.drop)}</td>
-        <td style="text-align:right">${fmt(r.pole)}</td>
-        <td style="text-align:right">${fmt(r.totalLen)}</td>
-        <td>${esc(r.within || "")}</td>
-        <td style="width:60px"></td>
-      </tr>
-    `,
+<tr>
+  <td style="border:1px solid #000; padding:8px;">${esc(r.blindNo || "")}</td>
+  <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.width)}</td>
+  <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.drop)}</td>
+  <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.pole)}</td>
+  <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.totalLen)}</td>
+  <td style="border:1px solid #000; padding:8px;">${esc(r.within || "")}</td>
+  <td style="border:1px solid #000; padding:8px; width:60px;"></td>
+</tr>
+`,
             )
             .join("");
 
-          return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8" />
-<title>Print — ${title}</title>
-<style>
-  body{font-family:Arial, Helvetica, sans-serif; color:#000; margin:24px;}
-  h1{font-size:18px; margin:0 0 6px;}
-  .meta{font-size:12px; margin:0 0 16px;}
-  table{width:100%; border-collapse:collapse; font-size:12px;}
-  th,td{border:1px solid #000; padding:8px 8px; vertical-align:top;}
-  th{background:#f2f2f2; text-align:left;}
-</style>
-</head>
-<body>
-  <h1>${title}</h1>
-  <div class="meta">Printed: ${dateStr}</div>
-  <table>
+          return `
+<div style="font-family: Arial, Helvetica, sans-serif; color:#000; padding:24px;">
+  <h1 style="font-size:18px; margin:0 0 6px;">${title}</h1>
+  <div style="font-size:12px; margin:0 0 16px;">Printed: ${dateStr}</div>
+
+  <table style="width:100%; border-collapse:collapse; font-size:12px;">
     <thead>
       <tr>
-        <th>Blind no.</th>
-        <th style="text-align:right">Width (mm)</th>
-        <th style="text-align:right">Drop (mm)</th>
-        <th style="text-align:right">Pole (mm)</th>
-        <th style="text-align:right">Total fabric (mm)</th>
-        <th>Into set</th>
-        <th>Complete</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:left;">Blind no.</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Width (mm)</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Drop (mm)</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Pole (mm)</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Total fabric (mm)</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:left;">Into set</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:left;">Complete</th>
       </tr>
     </thead>
     <tbody>
       ${tr}
     </tbody>
   </table>
-</body>
-</html>`;
+</div>
+`;
         };
 
         const printResults = () => {
@@ -1617,65 +1636,49 @@
               ),
           );
 
-          const html = buildPrintHtml(okRows);
+          if (!okRows.length) {
+            alert(
+              "Nothing to print yet. Please complete widths, drops, and materials.",
+            );
+            return;
+          }
 
-          // Use an iframe to avoid pop-up blockers (especially on iOS Safari).
-          const iframe = document.createElement("iframe");
-          iframe.style.position = "fixed";
-          iframe.style.right = "0";
-          iframe.style.bottom = "0";
-          iframe.style.width = "0";
-          iframe.style.height = "0";
-          iframe.style.border = "0";
-          iframe.style.opacity = "0";
-          iframe.setAttribute("aria-hidden", "true");
-          iframe.tabIndex = -1;
+          const printArea = $("#print-area");
+          if (!printArea) {
+            alert("Print area not found.");
+            return;
+          }
 
-          document.body.appendChild(iframe);
+          printArea.innerHTML = buildPrintMarkup(okRows);
+
+          document.body.classList.add("printing");
+          printArea.classList.remove("hidden");
+          printArea.setAttribute("aria-hidden", "false");
 
           const cleanup = () => {
-            try {
-              iframe.remove();
-            } catch {
-              /* noop */
-            }
+            document.body.classList.remove("printing");
+            printArea.classList.add("hidden");
+            printArea.setAttribute("aria-hidden", "true");
+            printArea.innerHTML = "";
+            window.removeEventListener("afterprint", cleanup);
           };
 
-          try {
-            const doc =
-              iframe.contentDocument || iframe.contentWindow?.document;
-            if (!doc) {
-              cleanup();
-              alert(
-                "Printing is not available in this browser. Please try again or use desktop.",
-              );
-              return;
-            }
+          window.addEventListener("afterprint", cleanup);
 
-            doc.open();
-            doc.write(html);
-            doc.close();
-
-            // Give the browser a moment to render the document before printing.
-            setTimeout(() => {
+          // Ensure DOM paint before print (important on iOS)
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
               try {
-                const win = iframe.contentWindow;
-                if (!win) throw new Error("No print window");
-                win.focus();
-                win.print();
+                window.print();
               } catch (err) {
-                alert(
-                  "Printing was blocked. If you are on iPhone, try Safari and ensure pop-ups are allowed.",
-                );
-              } finally {
-                // Cleanup after a short delay to allow the print dialog to open.
-                setTimeout(cleanup, 500);
+                cleanup();
+                alert("Printing failed. Please try again in Safari.");
+                return;
               }
-            }, 250);
-          } catch (err) {
-            cleanup();
-            alert("Printing failed: " + (err?.message || err));
-          }
+              // Fallback cleanup: iOS sometimes doesn't fire afterprint
+              setTimeout(cleanup, 1500);
+            });
+          });
         };
 
         const renderResults = () => {
