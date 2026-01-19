@@ -1,2717 +1,1785 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Delivery Tracker (React)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BBVsions — Vision Blind Calculator</title>
     <style>
+      :root {
+        --bg: #0b0f14;
+        --text: #e7eefc;
+        --muted: #9fb0cc;
+        --line: #223049;
+        --accent: #4da3ff;
+        --danger: #ff5a6a;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        --radius: 14px;
+        --pad-lg: 18px;
+        --font:
+          system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          sans-serif;
+        --mono:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
       body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          "Helvetica Neue", sans-serif;
-        background-color: #1c1c1e;
-        color: white;
-        touch-action: manipulation;
-      }
-      .parent-loading-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 100%;
-        pointer-events: none;
-        z-index: 0;
-        background: linear-gradient(
-          to right,
-          transparent,
-          rgba(10, 132, 255, 0.9)
-        );
-        opacity: 0.2;
-        transition: opacity 0.05s linear;
-      }
-
-      .parent-loading-overlay.reverse {
-        background: linear-gradient(
-          to left,
-          transparent,
-          rgba(10, 132, 255, 0.9)
+        font-family: var(--font);
+        color: var(--text);
+        line-height: 1.35;
+        background: radial-gradient(
+          1200px 800px at 20% 0%,
+          #142037 0%,
+          var(--bg) 55%,
+          #070a0f 100%
         );
       }
-
-      .parent-loading-overlay.remove {
-        background: linear-gradient(
-          to left,
-          transparent,
-          rgba(255, 59, 48, 0.9)
-        );
-      }
-
-      .parent-loading-overlay.remove.reverse {
-        background: linear-gradient(
-          to right,
-          transparent,
-          rgba(255, 59, 48, 0.9)
-        );
-      }
-      /* Ripple gradient effect for delivery buttons */
-      @keyframes ripple-effect {
-        0% {
-          transform: scale(0);
-          opacity: 0.5;
-        }
-        50% {
-          transform: scale(2.5);
-          opacity: 0.3;
-        }
-        100% {
-          transform: scale(4);
-          opacity: 0;
-        }
+      .app {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 18px 14px 92px;
       }
       header {
         display: flex;
+        align-items: flex-start;
         justify-content: space-between;
-        align-items: center;
-        background-color: #2c2c2e;
-        padding: 1rem;
+        gap: 12px;
+        margin: 8px 0 14px;
       }
-      .button {
-        background-color: #0a84ff;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 1rem 2rem;
-        font-size: 1.2rem;
-        margin: 1rem auto;
-        cursor: pointer;
-        display: block;
-        width: 90%;
-        max-width: 300px;
+      .brand h1 {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.2px;
       }
-      .danger {
-        background-color: #ff3b30;
+      .brand p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
       }
-      .modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
+      .tabs {
         display: flex;
-        justify-content: center;
+        gap: 8px;
+        padding: 6px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(15, 21, 33, 0.55);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: var(--shadow);
+      }
+      .tab {
+        border: 0;
+        background: transparent;
+        color: var(--muted);
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .tab[aria-selected="true"] {
+        color: var(--text);
+        background: linear-gradient(
+          180deg,
+          rgba(77, 163, 255, 0.22),
+          rgba(77, 163, 255, 0.1)
+        );
+        border: 1px solid rgba(77, 163, 255, 0.35);
+      }
+      .chip {
+        display: inline-flex;
         align-items: center;
-        z-index: 9999;
+        gap: 8px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(17, 24, 38, 0.55);
+        color: var(--muted);
+        font-size: 12px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
       }
-      .modal-content {
-        background: #2c2c2e;
-        padding: 1rem;
-        border-radius: 10px;
-        width: 90%;
-        max-width: 400px;
-        color: white;
-        position: relative;
-        z-index: 10000;
+      .chip strong {
+        color: var(--text);
+        font-weight: 700;
       }
-      body.modal-open {
+      .panel {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        background: linear-gradient(
+          180deg,
+          rgba(17, 24, 38, 0.72),
+          rgba(15, 21, 33, 0.55)
+        );
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
         overflow: hidden;
       }
-      .hold-btn .progress-ring {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 2;
+      .panel-hd {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        padding: var(--pad-lg);
+        border-bottom: 1px solid rgba(34, 48, 73, 0.85);
       }
-      .hold-btn .progress-ring circle {
-        stroke: white;
-        stroke-width: 4;
-        fill: none;
-        stroke-dasharray: 283;
-        stroke-dashoffset: 283;
-        transition: stroke-dashoffset 0.05s linear;
+      .panel-hd h2 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: 0.2px;
+      }
+      .panel-hd .sub {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .panel-bd {
+        padding: var(--pad-lg);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        background: rgba(17, 24, 38, 0.65);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 800;
+        font-size: 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition:
+          transform 0.04s ease,
+          border-color 0.15s ease,
+          background 0.15s ease;
+      }
+      .btn:hover {
+        border-color: rgba(77, 163, 255, 0.55);
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn.primary {
+        background: linear-gradient(
+          180deg,
+          rgba(77, 163, 255, 0.28),
+          rgba(77, 163, 255, 0.14)
+        );
+        border-color: rgba(77, 163, 255, 0.55);
+      }
+      .btn.danger {
+        background: linear-gradient(
+          180deg,
+          rgba(255, 90, 106, 0.18),
+          rgba(255, 90, 106, 0.08)
+        );
+        border-color: rgba(255, 90, 106, 0.55);
+      }
+      .btn.ghost {
+        background: transparent;
+      }
+      .btn.small {
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 12px;
+      }
+      .card {
+        border: 1px solid rgba(34, 48, 73, 0.85);
+        border-radius: var(--radius);
+        background: rgba(15, 21, 33, 0.55);
+        overflow: hidden;
+      }
+      .card-hd {
+        padding: 12px 14px;
+        border-bottom: 1px solid rgba(34, 48, 73, 0.65);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .card-hd h3 {
+        margin: 0;
+        font-size: 13px;
+      }
+      .card-bd {
+        padding: 12px 14px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .err {
+        font-size: 12px;
+        color: var(--danger);
+        margin-top: 6px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 11px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(34, 48, 73, 0.9);
+        background: rgba(11, 15, 20, 0.55);
+        color: var(--text);
+        outline: none;
+        font-size: 14px;
+      }
+      input::placeholder {
+        color: rgba(159, 176, 204, 0.55);
+      }
+      input:focus,
+      select:focus {
+        border-color: rgba(77, 163, 255, 0.65);
+        box-shadow: 0 0 0 3px rgba(77, 163, 255, 0.15);
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .table th,
+      .table td {
+        padding: 10px 10px;
+        border-bottom: 1px solid rgba(34, 48, 73, 0.65);
+        vertical-align: top;
+        text-align: left;
+        font-size: 13px;
+      }
+      .table th {
+        color: var(--muted);
+        font-weight: 800;
+        font-size: 12px;
+      }
+      .table tr:last-child td {
+        border-bottom: none;
+      }
+      .table .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 48, 73, 0.9);
+        background: rgba(17, 24, 38, 0.55);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .result-top .pill {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(77, 163, 255, 0.38);
+        background: linear-gradient(
+          180deg,
+          rgba(77, 163, 255, 0.22),
+          rgba(11, 15, 20, 0.08)
+        );
+        color: rgba(231, 238, 252, 0.92);
+        box-shadow:
+          0 14px 34px rgba(0, 0, 0, 0.28),
+          0 0 0 1px rgba(77, 163, 255, 0.12) inset,
+          0 -14px 40px rgba(77, 163, 255, 0.1) inset;
+        letter-spacing: 0.2px;
+        min-width: 132px;
+      }
+      .result-top .pill strong {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+        color: var(--text);
+        font-weight: 950;
+        font-size: 13px;
+        line-height: 1;
+      }
+      .result-top .pill strong::after {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        height: 2px;
+        border-radius: 999px;
+        background: rgba(77, 163, 255, 0.55);
+        margin-left: 6px;
+        transform: translateY(-2px);
+      }
+      .result-top .pill .subpill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0;
+        padding: 5px 9px;
+        border-radius: 999px;
+        border: 1px solid rgba(34, 48, 73, 0.85);
+        background: rgba(11, 15, 20, 0.3);
+        color: rgba(159, 176, 204, 0.92);
+        font-size: 11px;
+        font-weight: 850;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .results {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+      }
+      .result-card {
+        grid-column: span 12;
+        position: relative;
+        border: 1px solid rgba(77, 163, 255, 0.22);
+        border-radius: var(--radius);
+        background: linear-gradient(
+          180deg,
+          rgba(18, 26, 43, 0.88),
+          rgba(15, 21, 33, 0.6)
+        );
+        overflow: hidden;
+        box-shadow:
+          0 14px 40px rgba(0, 0, 0, 0.45),
+          0 0 0 1px rgba(34, 48, 73, 0.5) inset;
+      }
+      .result-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          800px 220px at 25% 0%,
+          rgba(77, 163, 255, 0.14),
+          rgba(77, 163, 255, 0) 60%
+        );
+      }
+      .result-top {
+        position: relative;
+        padding: 14px 14px 12px 14px;
+        border-bottom: 1px solid rgba(34, 48, 73, 0.75);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        background: linear-gradient(
+          180deg,
+          rgba(11, 15, 20, 0.35),
+          rgba(11, 15, 20, 0.05)
+        );
+      }
+      .result-top::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 10px;
+        bottom: 10px;
+        width: 3px;
+        border-radius: 999px;
+        background: rgba(77, 163, 255, 0.75);
+      }
+      .result-top h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+      .result-meta {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 10px;
+        padding: 12px 14px;
+      }
+      .k {
+        grid-column: span 6;
+        border: 1px solid rgba(34, 48, 73, 0.85);
+        border-radius: 12px;
+        padding: 11px 11px;
+        background: linear-gradient(
+          180deg,
+          rgba(11, 15, 20, 0.44),
+          rgba(11, 15, 20, 0.26)
+        );
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+      }
+      .k .lbl {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .k .val {
+        margin-top: 4px;
+        font-size: 16px;
+        font-weight: 900;
+      }
+      .k .val small {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 800;
+      }
+      .k.wide {
+        grid-column: span 12;
+      }
+      .warn {
+        padding: 10px 14px;
+        border-top: 1px solid rgba(34, 48, 73, 0.65);
+        color: rgba(255, 90, 106, 0.95);
+        font-size: 12px;
+      }
+      .sticky-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 10px 14px;
+        background: linear-gradient(
+          180deg,
+          rgba(7, 10, 15, 0),
+          rgba(7, 10, 15, 0.85) 35%,
+          rgba(7, 10, 15, 0.96)
+        );
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(34, 48, 73, 0.45);
+      }
+      .sticky-inner {
+        max-width: 1060px;
+        margin: 0 auto;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .sticky-inner .left {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .hidden {
+        display: none !important;
+      }
+      @media (max-width: 560px) {
+        .app {
+          padding-bottom: 120px;
+        }
+        header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .tabs {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .panel-hd {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .panel-hd .sub {
+          max-width: 100%;
+        }
+        #job-actions {
+          width: 100%;
+        }
+        #job-actions .btn {
+          width: 100%;
+          justify-content: center;
+        }
+        .row {
+          gap: 8px;
+        }
+        .btn {
+          padding: 12px 12px;
+        }
+        .btn.small {
+          padding: 10px 10px;
+        }
+        .card-hd {
+          flex-direction: row;
+        }
+        .sticky-inner {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .sticky-inner .left {
+          width: 100%;
+          justify-content: space-between;
+        }
+        .sticky-inner .right {
+          width: 100%;
+        }
+        .sticky-inner .right .btn {
+          width: 100%;
+          justify-content: center;
+          padding: 14px 12px;
+        }
+        .chip {
+          padding: 8px 10px;
+        }
+
+        /* Responsive table -> card rows */
+        #job-table-wrap .table thead {
+          display: none;
+        }
+        #job-table-wrap .table,
+        #job-table-wrap .table tbody,
+        #job-table-wrap .table tr,
+        #job-table-wrap .table td {
+          display: block;
+          width: 100%;
+        }
+        #job-table-wrap .table tr {
+          border: 1px solid rgba(34, 48, 73, 0.85);
+          border-radius: 14px;
+          background: rgba(15, 21, 33, 0.55);
+          margin-bottom: 12px;
+          position: relative;
+        }
+        #job-table-wrap .table td {
+          border-bottom: 1px solid rgba(34, 48, 73, 0.65);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px;
+          overflow: visible;
+          min-width: 0;
+        }
+        #job-table-wrap .table td:last-child {
+          border-bottom: none;
+        }
+        #job-table-wrap .table td::before {
+          content: attr(data-label);
+          color: var(--muted);
+          font-size: 12px;
+          font-weight: 800;
+          flex: 0 0 auto;
+          min-width: 78px;
+        }
+        #job-table-wrap input,
+        #job-table-wrap select {
+          flex: 1 1 auto;
+          min-width: 0;
+          max-width: none;
+        }
+        #job-table-wrap .actions {
+          justify-content: flex-end;
+        }
+        #job-table-wrap .actions .btn {
+          width: auto;
+        }
+        #job-table-wrap .hint {
+          margin-top: 0 !important;
+        }
+      }
+      @media (min-width: 820px) {
+        .brand h1 {
+          font-size: 20px;
+        }
+        .k {
+          grid-column: span 3;
+        }
+        .k.wide {
+          grid-column: span 6;
+        }
+        .panel-bd {
+          padding: 18px;
+        }
       }
     </style>
   </head>
   <body>
-    <div id="root"></div>
-
-    <!-- React + Babel CDN -->
-    <script
-      src="https://unpkg.com/react@18/umd/react.development.js"
-      crossorigin
-    ></script>
-    <script
-      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
-      crossorigin
-    ></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script type="text/babel">
-      const { useState, useEffect } = React;
-
-      function App() {
-        const [page, setPage] = useState("home");
-        const [settings, setSettings] = useState(() => {
-          const saved = localStorage.getItem("settings");
-          return saved
-            ? JSON.parse(saved)
-            : {
-                hourlyRate: "10", // default value
-                perDelivery: "2", // default value
-                perExtra: "1", // default value
-                perAdditional: "1", // default value
-              };
-        });
-
-        const [shiftData, setShiftData] = useState(() => {
-          const savedShift = JSON.parse(localStorage.getItem("currentShift"));
-          return (
-            savedShift || {
-              startMileage: "",
-              isClockedIn: false,
-              startTime: null,
-              endTime: null,
-            }
-          );
-        });
-
-        useEffect(() => {
-          localStorage.setItem("settings", JSON.stringify(settings));
-        }, [settings]);
-
-        useEffect(() => {
-          if (shiftData.isClockedIn) {
-            // Save shift data to localStorage to persist across app restarts
-            localStorage.setItem("currentShift", JSON.stringify(shiftData));
-          } else {
-            localStorage.removeItem("currentShift"); // Clean up if shift ends
-          }
-        }, [shiftData]);
-
-        return (
-          <div>
-            <header>
-              <div>Delivery Tracker</div>
-              <button
-                onClick={() => setPage("settings")}
-                aria-label="Settings"
-                style={{
-                  backgroundColor: "#3a3a3c",
-                  color: "white",
-                  border: "1px solid #5a5a5c",
-                  borderRadius: "8px",
-                  padding: "0.5rem 1rem",
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "background 0.3s, transform 0.1s",
-                }}
-                onMouseOver={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#4a4a4c")
-                }
-                onMouseOut={(e) =>
-                  (e.currentTarget.style.backgroundColor = "#3a3a3c")
-                }
-                onMouseDown={(e) =>
-                  (e.currentTarget.style.transform = "scale(0.95)")
-                }
-                onMouseUp={(e) =>
-                  (e.currentTarget.style.transform = "scale(1)")
-                }
-              >
-                Settings
-              </button>
-            </header>
-            <main>
-              {page === "home" && (
-                <HomePage
-                  setPage={setPage}
-                  shiftData={shiftData} // Pass shift data to home page
-                />
-              )}
-              {page === "settings" && (
-                <SettingsPage
-                  settings={settings}
-                  setSettings={setSettings}
-                  setPage={setPage}
-                />
-              )}
-              {page === "startShift" && (
-                <StartShiftPage
-                  setPage={setPage}
-                  shiftData={shiftData}
-                  setShiftData={setShiftData}
-                />
-              )}
-              {page === "shift" && (
-                <ShiftPage
-                  settings={settings}
-                  shiftData={shiftData}
-                  setShiftData={setShiftData}
-                  setPage={setPage}
-                />
-              )}
-              {page === "history" && (
-                <HistoryPage settings={settings} setPage={setPage} />
-              )}
-            </main>
-          </div>
-        );
-      }
-
-      function HomePage({ setPage, shiftData }) {
-        const handleStartShift = () => {
-          // Navigate to start shift page
-          setPage("startShift");
-        };
-
-        const handleCurrentShift = () => {
-          // Navigate to the shift page if a shift is ongoing
-          setPage("shift");
-        };
-
-        return (
-          <main style={{ padding: "1.5rem" }}>
-            {shiftData.isClockedIn ? (
-              <button className="button" onClick={handleCurrentShift}>
-                Current Shift
-              </button>
-            ) : (
-              <button className="button" onClick={handleStartShift}>
-                Start Shift
-              </button>
-            )}
-
-            <button className="button" onClick={() => setPage("history")}>
-              History
+    <div class="app">
+      <header>
+        <div class="brand">
+          <h1>BBVsions</h1>
+        </div>
+        <div class="row" style="justify-content: flex-end">
+          <div class="tabs" role="tablist" aria-label="Sections">
+            <button
+              class="tab"
+              id="tab-job"
+              role="tab"
+              aria-selected="true"
+              aria-controls="view-job"
+            >
+              Job
             </button>
-          </main>
-        );
-      }
-
-      function SettingsPage({ settings, setSettings, setPage }) {
-        const [form, setForm] = useState(settings);
-
-        function handleChange(e) {
-          const { name, value } = e.target;
-          setForm((prev) => ({ ...prev, [name]: value }));
-        }
-
-        function handleSave() {
-          if (
-            !form.hourlyRate ||
-            !form.perDelivery ||
-            !form.perExtra ||
-            !form.perAdditional ||
-            !form.lastPayDate // Check if the last pay date is filled
-          ) {
-            alert("Please complete all fields.");
-            return;
-          }
-          setSettings(form);
-          setPage("home");
-        }
-
-        return (
-          <main style={{ padding: "1.5rem" }}>
-            <h3 style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+            <button
+              class="tab"
+              id="tab-settings"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-settings"
+            >
               Settings
-            </h3>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section
+        id="view-job"
+        class="panel"
+        role="tabpanel"
+        aria-labelledby="tab-job"
+      >
+        <div class="panel-hd">
+          <div>
+            <h2 id="job-heading">Job</h2>
+            <div class="sub" id="job-subtext">
+              Create a job, then add blinds. Select a material per blind. Click
+              Calculate.
+            </div>
+          </div>
+          <div class="row hidden" id="job-actions">
+            <button class="btn" id="btn-add-blind" type="button">
+              Add Blind
+            </button>
+            <button class="btn danger" id="btn-clear-job" type="button">
+              Clear Blinds
+            </button>
+            <button class="btn danger" id="btn-new-job" type="button">
+              New Job
+            </button>
+          </div>
+        </div>
+        <div class="panel-bd">
+          <div class="card" id="job-setup-card">
+            <div class="card-hd">
+              <h3>Job Setup</h3>
+              <span class="pill" id="job-pill">No job</span>
+            </div>
+            <div class="card-bd">
+              <div class="grid" id="job-setup">
+                <div style="grid-column: span 12">
+                  <label for="job-name">Job name</label>
+                  <input
+                    id="job-name"
+                    placeholder="e.g., Smith Street — Living room + Kitchen"
+                    autocomplete="off"
+                  />
+                  <div class="hint">Create a job to enable adding blinds.</div>
+                  <div class="err hidden" id="err-job-name"></div>
+                </div>
+                <div style="grid-column: span 12">
+                  <button class="btn primary" id="btn-create-job" type="button">
+                    Create Job
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active job card removed -->
+
+          <div id="job-empty" class="hint">No blinds added yet.</div>
+          <div id="job-table-wrap" class="hidden">
+            <table class="table" aria-label="Blinds">
+              <thead>
+                <tr>
+                  <th style="width: 12ch">Blind no.</th>
+                  <th style="width: 14ch">Width (mm)</th>
+                  <th style="width: 14ch">Drop (mm)</th>
+                  <th>Material</th>
+                  <th style="width: 1%; white-space: nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="blinds-tbody"></tbody>
+            </table>
+            <div class="hint" style="margin-top: 10px">
+              Rules: Total = drop × 2 + 350; L2 = drop − minus; Pole = width −
+              45; Remainder = L2 mod set length.
+            </div>
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+              class="row hidden"
+              id="job-bottom-actions"
+              style="margin-top: 12px"
             >
-              {/* Hourly Rate Input */}
-              <label
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "1rem",
-                }}
+              <button
+                class="btn primary"
+                id="btn-add-blind-bottom"
+                type="button"
               >
-                Hourly Rate (£)
-                <input
-                  name="hourlyRate"
-                  type="number"
-                  value={form.hourlyRate}
-                  onChange={handleChange}
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#2c2c2e",
-                    color: "white",
-                    fontSize: "1rem",
-                  }}
-                />
-              </label>
-
-              {/* Per Delivery Input */}
-              <label
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "1rem",
-                }}
-              >
-                Per Delivery (£)
-                <input
-                  name="perDelivery"
-                  type="number"
-                  value={form.perDelivery}
-                  onChange={handleChange}
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#2c2c2e",
-                    color: "white",
-                    fontSize: "1rem",
-                  }}
-                />
-              </label>
-
-              {/* Per Extra Input */}
-              <label
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "1rem",
-                }}
-              >
-                Per Extra (£)
-                <input
-                  name="perExtra"
-                  type="number"
-                  value={form.perExtra}
-                  onChange={handleChange}
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#2c2c2e",
-                    color: "white",
-                    fontSize: "1rem",
-                  }}
-                />
-              </label>
-
-              {/* Per Additional Input */}
-              <label
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "1rem",
-                }}
-              >
-                Per Additional (£)
-                <input
-                  name="perAdditional"
-                  type="number"
-                  value={form.perAdditional}
-                  onChange={handleChange}
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#2c2c2e",
-                    color: "white",
-                    fontSize: "1rem",
-                  }}
-                />
-              </label>
-
-              {/* Last Pay Date Input */}
-              <label
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  fontSize: "1rem",
-                }}
-              >
-                Last Pay Date
-                <input
-                  name="lastPayDate"
-                  type="date"
-                  value={form.lastPayDate}
-                  onChange={handleChange}
-                  style={{
-                    marginTop: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: "#2c2c2e",
-                    color: "white",
-                    fontSize: "1rem",
-                  }}
-                />
-              </label>
-
-              <button className="button" onClick={handleSave}>
-                Save Settings
-              </button>
-              <button className="button" onClick={() => setPage("home")}>
-                Back to Home
+                + Add Blind
               </button>
             </div>
-          </main>
-        );
-      }
+          </div>
 
-      function StartShiftPage({ setPage, shiftData, setShiftData }) {
-        const [startMileage, setStartMileage] = useState(
-          shiftData.startMileage || ""
-        );
+          <div id="results" class="results hidden" aria-live="polite"></div>
+        </div>
+      </section>
 
-        return (
-          <main
-            style={{
-              padding: "2rem",
-              maxWidth: "420px",
-              margin: "0 auto",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "2rem",
-            }}
+      <section
+        id="view-settings"
+        class="panel hidden"
+        role="tabpanel"
+        aria-labelledby="tab-settings"
+      >
+        <div class="panel-hd">
+          <div>
+            <h2>Settings</h2>
+            <div class="sub">
+              Create and manage Vision materials. Saved locally on this device.
+            </div>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="btn-add-material" type="button">
+              Add Material
+            </button>
+            <button class="btn ghost" id="btn-export" type="button">
+              Export JSON
+            </button>
+            <button class="btn ghost" id="btn-import" type="button">
+              Import JSON
+            </button>
+            <button class="btn danger" id="btn-reset-all" type="button">
+              Reset All
+            </button>
+          </div>
+        </div>
+        <div class="panel-bd">
+          <div id="materials-empty" class="hint">
+            No materials yet. Add at least one to start calculating jobs.
+          </div>
+
+          <div id="materials-table-wrap" class="hidden">
+            <table class="table" aria-label="Materials">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th style="width: 12ch">Mesh (mm)</th>
+                  <th style="width: 12ch">Solid (mm)</th>
+                  <th style="width: 12ch">Set (mm)</th>
+                  <th style="width: 14ch">L2 minus (mm)</th>
+                  <th style="width: 1%; white-space: nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="materials-tbody"></tbody>
+            </table>
+          </div>
+
+          <div class="card" style="margin-top: 14px">
+            <div class="card-hd">
+              <h3 id="mat-form-title">Add Material</h3>
+              <span class="pill" id="mat-form-mode">New</span>
+            </div>
+            <div class="card-bd">
+              <form id="material-form">
+                <input type="hidden" id="mat-id" />
+                <div class="grid">
+                  <div style="grid-column: span 12">
+                    <label for="mat-name">Material name</label>
+                    <input
+                      id="mat-name"
+                      placeholder="e.g., Grey 50/75"
+                      autocomplete="off"
+                    />
+                    <div class="err hidden" id="err-mat-name"></div>
+                  </div>
+
+                  <div style="grid-column: span 6">
+                    <label for="mat-mesh">Mesh height (mm)</label>
+                    <input
+                      id="mat-mesh"
+                      inputmode="numeric"
+                      placeholder="e.g., 50"
+                    />
+                    <div class="err hidden" id="err-mat-mesh"></div>
+                  </div>
+
+                  <div style="grid-column: span 6">
+                    <label for="mat-solid">Solid height (mm)</label>
+                    <input
+                      id="mat-solid"
+                      inputmode="numeric"
+                      placeholder="e.g., 75"
+                    />
+                    <div class="err hidden" id="err-mat-solid"></div>
+                  </div>
+
+                  <div style="grid-column: span 6">
+                    <label>Set length (mm)</label>
+                    <input id="mat-set" disabled placeholder="Auto" />
+                  </div>
+
+                  <div style="grid-column: span 6">
+                    <label for="mat-minus">L2 minus value (mm)</label>
+                    <input
+                      id="mat-minus"
+                      inputmode="numeric"
+                      placeholder="e.g., 25"
+                    />
+                    <div class="err hidden" id="err-mat-minus"></div>
+                  </div>
+
+                  <div style="grid-column: span 12">
+                    <div class="row">
+                      <button class="btn primary" type="submit">
+                        Save Material
+                      </button>
+                      <button class="btn" id="btn-cancel-edit" type="button">
+                        Cancel
+                      </button>
+                      <span class="hint"
+                        >Set length is calculated as mesh + solid.</span
+                      >
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <input
+            type="file"
+            id="import-file"
+            accept="application/json"
+            class="hidden"
+          />
+        </div>
+      </section>
+    </div>
+
+    <div class="sticky-bar">
+      <div class="sticky-inner">
+        <div class="left">
+          <span class="chip"
+            ><strong id="status-materials">0</strong> materials</span
           >
-            <h2
-              style={{
-                fontSize: "2rem",
-                color: "#ffffff",
-                fontWeight: "700",
-                textAlign: "center",
-              }}
-            >
-              Ready to Start Your Shift?
-            </h2>
-            {/* Card for mileage input */}
-            <div
-              style={{
-                background: "linear-gradient(135deg, #333, #222)",
-                padding: "1.5rem",
-                borderRadius: "16px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-                width: "100%",
-              }}
-            >
-              <label
-                style={{
-                  fontSize: "1rem",
-                  color: "#ccc",
-                  marginBottom: "0.5rem",
-                  display: "block",
-                }}
-              >
-                Enter Start Mileage
-              </label>
-              <input
-                type="number"
-                value={startMileage}
-                onChange={(e) => setStartMileage(e.target.value)}
-                placeholder="e.g., 12345"
-                style={{
-                  padding: "0.75rem 1rem",
-                  fontSize: "1rem",
-                  borderRadius: "10px",
-                  border: "1px solid #444",
-                  background: "#1f1f1f",
-                  color: "#fff",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  marginTop: "0.5rem",
-                }}
-              />
-            </div>
-            {/* Action button group */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-                width: "100%",
-              }}
-            >
-              <button
-                onClick={() => {
-                  if (!startMileage) return;
-                  setShiftData({
-                    ...shiftData,
-                    startMileage,
-                    isClockedIn: true,
-                    startTime: new Date(),
-                  });
-                  setPage("shift");
-                }}
-                style={{
-                  backgroundColor: startMileage ? "#34c759" : "#666",
-                  padding: "0.75rem",
-                  fontSize: "1.1rem",
-                  borderRadius: "10px",
-                  border: "none",
-                  color: "#fff",
-                  fontWeight: "bold",
-                  cursor: startMileage ? "pointer" : "not-allowed",
-                  transition: "transform 0.1s ease-in-out",
-                }}
-                disabled={!startMileage}
-              >
-                Clock In &amp; Go
-              </button>
-            </div>
-          </main>
-        );
-      }
+          <span class="chip"><strong id="status-blinds">0</strong> blinds</span>
+          <span class="chip"><strong id="status-job">No job</strong></span>
+        </div>
+        <div class="right">
+          <button class="btn primary" id="btn-calc" type="button">
+            Calculate
+          </button>
+        </div>
+      </div>
+    </div>
 
-      function ShiftPage({ settings, shiftData, setShiftData, setPage }) {
-        const [counts, setCounts] = useState({
-          standard: shiftData.standard || 0,
-          extra: shiftData.extra || 0,
-          additional: shiftData.additional || 0,
-        });
-        // Cleanup effect: always remove modal-open class on unmount
-        useEffect(() => {
-          return () => {
-            document.body.classList.remove("modal-open");
-          };
-        }, []);
-        // Use deliveryTimes as array of Date objects (for each delivery event)
-        const [deliveryTimes, setDeliveryTimes] = useState(() => {
-          // Initialize from shiftData.latestDeliveryTimes, converting to Date objects if present
-          if (
-            shiftData.latestDeliveryTimes &&
-            Array.isArray(shiftData.latestDeliveryTimes)
-          ) {
-            return shiftData.latestDeliveryTimes.map((t) => new Date(t));
-          }
-          return [];
-        });
-        // Current time for calculations
-        const [currentTime, setCurrentTime] = useState(new Date());
-        useEffect(() => {
-          const interval = setInterval(() => {
-            setCurrentTime(new Date());
-          }, 1000);
-          return () => clearInterval(interval);
-        }, []);
-        // Get latest delivery time from deliveryTimes array
-        const latestDeliveryTime =
-          deliveryTimes.length > 0
-            ? deliveryTimes[deliveryTimes.length - 1]
-            : null;
-        // Calculate time ago string for latest delivery
-        const calculateTimeAgo = (time) => {
-          if (!time) return "N/A";
-          if (!(time instanceof Date) || isNaN(time)) return "N/A";
-          const diffInSeconds = Math.floor((currentTime - time) / 1000);
-          if (diffInSeconds < 0) return "N/A";
-          const hours = Math.floor(diffInSeconds / 3600);
-          const minutes = Math.floor((diffInSeconds % 3600) / 60);
-          const seconds = diffInSeconds % 60;
-          let timeAgo = "";
-          if (hours > 0) timeAgo += `${hours} hour${hours !== 1 ? "s" : ""} `;
-          if (minutes > 0)
-            timeAgo += `${minutes} minute${minutes !== 1 ? "s" : ""} `;
-          timeAgo += `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
-          return timeAgo;
+    <script>
+      (() => {
+        const KEYS = {
+          materials: "bbvsions_materials_v2",
+          blinds: "bbvsions_job_blinds_v2",
+          job: "bbvsions_current_job_v1",
         };
-        const latestDeliveryTimeAgo = latestDeliveryTime
-          ? calculateTimeAgo(latestDeliveryTime)
-          : "N/A";
-        const [startTime] = useState(
-          new Date(shiftData.startTime || Date.now())
-        );
-        const [notes, setNotes] = useState(shiftData.notes || "");
-        // Notes modal state
-        const [showNotesModal, setShowNotesModal] = useState(false);
-        const [editNotes, setEditNotes] = useState(notes);
-        const [startMileage, setStartMileage] = useState(
-          shiftData.startMileage || ""
-        );
-        const [currentMileage, setCurrentMileage] = useState(
-          shiftData.currentMileage || ""
-        );
-        const [totalMiles, setTotalMiles] = useState(
-          shiftData.totalMiles || null
-        );
-        // State for modals
-        const [showMileageModal, setShowMileageModal] = useState(false);
-        const [showEndModal, setShowEndModal] = useState(false);
-        useEffect(() => {
-          if (shiftData.isClockedIn) {
-            localStorage.setItem("currentShift", JSON.stringify(shiftData));
-          }
-        }, [shiftData]);
 
-        // Modal open/close: Prevent background scroll and proper layering
-        useEffect(() => {
-          const modalVisible =
-            showNotesModal || showMileageModal || showEndModal;
-          if (modalVisible) {
-            document.body.classList.add("modal-open");
-          } else {
-            document.body.classList.remove("modal-open");
-          }
-        }, [showNotesModal, showMileageModal, showEndModal]);
-        // Calculate the total delivery earnings
-        const deliveryEarnings = (counts) => {
-          const perDelivery = parseFloat(settings.perDelivery || 0);
-          const perExtra = parseFloat(settings.perExtra || 0);
-          const perAdditional = parseFloat(settings.perAdditional || 0);
-          return (
-            counts.standard * perDelivery +
-            counts.extra * perExtra +
-            counts.additional * perAdditional
-          ).toFixed(2);
+        const $ = (s, r = document) => r.querySelector(s);
+        const uid = () =>
+          crypto?.randomUUID
+            ? crypto.randomUUID()
+            : "id_" + Math.random().toString(16).slice(2) + Date.now();
+        const toInt = (v) => {
+          if (typeof v === "number")
+            return Number.isFinite(v) ? Math.trunc(v) : NaN;
+          const s = String(v ?? "")
+            .trim()
+            .replace(/,/g, "");
+          if (!s) return NaN;
+          const n = Number(s);
+          return Number.isFinite(n) ? Math.trunc(n) : NaN;
         };
-        // Calculate wage based on start time and end time (current time for ongoing shifts)
-        const calculateWage = () => {
-          const secondsElapsed = Math.floor((currentTime - startTime) / 1000);
-          const minutesElapsed = Math.floor(secondsElapsed / 60);
-          const calculatedWage =
-            (minutesElapsed / 60) * parseFloat(settings.hourlyRate || 0);
-          return isNaN(calculatedWage) ? 0 : calculatedWage.toFixed(2);
-        };
-        // Helper function to calculate elapsed time (hours, minutes, seconds)
-        const calculateTimeElapsed = () => {
-          const secondsElapsed = Math.floor((currentTime - startTime) / 1000);
-          const hours = Math.floor(secondsElapsed / 3600);
-          const minutes = Math.floor((secondsElapsed % 3600) / 60);
-          const seconds = secondsElapsed % 60;
-          return { hours, minutes, seconds };
-        };
-        const { hours, minutes, seconds } = calculateTimeElapsed();
-        const validWage = calculateWage();
-        const totalDelivery = deliveryEarnings(counts);
-        const totalEarned = (
-          parseFloat(validWage) + parseFloat(totalDelivery)
-        ).toFixed(2);
-        // For displaying delivery total in the UI (variable used in JSX)
-        const deliveryTotal = totalDelivery;
-        // --- Hold-to-trigger state and logic for delivery buttons ---
-        const [holdState, setHoldState] = useState({
-          isHolding: false,
-          timer: null,
-          type: null,
-          action: null, // 'add' or 'remove'
-          progress: 0,
-          completed: false,
-          gradient: null, // 'add' or 'remove' for animation
-          clickX: null,
-          clickY: null,
-        });
-        const holdIntervalRef = React.useRef();
-        const holdTimeoutRef = React.useRef();
-        // Helper: start holding for a button
-        const handleButtonHoldStart = (type, action, event) => {
-          // Only allow one hold at a time
-          if (holdState.isHolding) return;
-          let clickX = null;
-          let clickY = null;
-          if (
-            event &&
-            event.currentTarget &&
-            event.clientX != null &&
-            event.clientY != null
-          ) {
-            const rect =
-              event.currentTarget.parentElement.getBoundingClientRect();
-            clickX = event.clientX - rect.left;
-            clickY = event.clientY - rect.top;
-          }
-          setHoldState({
-            isHolding: true,
-            timer: null,
-            type,
-            action,
-            progress: 0,
-            completed: false,
-            gradient: null,
-            clickX,
-            clickY,
-          });
-          // Animate progress bar (update every 50ms)
-          let elapsed = 0;
-          holdIntervalRef.current = setInterval(() => {
-            elapsed += 50;
-            setHoldState((prev) => {
-              if (!prev.isHolding) return prev;
-              return { ...prev, progress: Math.min(elapsed / 3000, 1) };
-            });
-          }, 50);
-          // After 3 seconds, trigger the action
-          holdTimeoutRef.current = setTimeout(() => {
-            setHoldState((prev) => ({
-              ...prev,
-              completed: true,
-              isHolding: false,
-              progress: 1,
-              gradient: action,
-            }));
-            // Actually adjust the count
-            handleAdjust(type, action === "add" ? 1 : -1, true /*fromHold*/);
-            setTimeout(() => {
-              setHoldState((prev) =>
-                prev.gradient === action ? { ...prev, gradient: null } : prev
-              );
-            }, 700);
-          }, 3000);
-        };
-        // Helper: cancel hold if released early, with reverse animation
-        const handleButtonHoldEnd = () => {
-          clearInterval(holdIntervalRef.current);
-          clearTimeout(holdTimeoutRef.current);
-
-          if (holdState.progress < 1) {
-            let reverseProgress = holdState.progress;
-            const reverseInterval = setInterval(() => {
-              reverseProgress -= 0.05;
-              if (reverseProgress <= 0) {
-                clearInterval(reverseInterval);
-                setHoldState((prev) => ({
-                  ...prev,
-                  isHolding: false,
-                  progress: 0,
-                  type: null,
-                  action: null,
-                  completed: false,
-                  reversing: false,
-                }));
-              } else {
-                setHoldState((prev) => ({
-                  ...prev,
-                  progress: reverseProgress,
-                  reversing: true,
-                }));
-              }
-            }, 25);
-          } else {
-            setHoldState((prev) => ({
-              ...prev,
-              isHolding: false,
-              progress: 0,
-              type: null,
-              action: null,
-              completed: false,
-              reversing: false,
-            }));
+        const fmt = (n) => (Number.isFinite(n) ? String(Math.trunc(n)) : "—");
+        const esc = (str) =>
+          String(str ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+        const load = (k, fb) => {
+          try {
+            const r = localStorage.getItem(k);
+            return r ? (JSON.parse(r) ?? fb) : fb;
+          } catch {
+            return fb;
           }
         };
-        // --- End hold-to-trigger logic ---
-        // Track delivery times for each delivery added/removed
-        // Accepts fromHold for skipping confirm dialog on -1
-        const handleAdjust = (type, delta, fromHold) => {
-          if (delta === -1 && counts[type] > 0 && !fromHold) {
-            const confirmRemoval = window.confirm(
-              `Are you sure you want to remove one ${type} delivery?`
-            );
-            if (!confirmRemoval) return;
-          }
-          const newCounts = {
-            ...counts,
-            [type]: Math.max(0, counts[type] + delta),
-          };
-          let newDeliveryTimes;
-          if (delta === 1) {
-            newDeliveryTimes = [...deliveryTimes, new Date()];
-          } else if (delta === -1 && deliveryTimes.length > 0) {
-            newDeliveryTimes = deliveryTimes.slice(0, -1);
-          } else {
-            newDeliveryTimes = deliveryTimes;
-          }
-          setCounts(newCounts);
-          setDeliveryTimes(newDeliveryTimes);
-          setShiftData({
-            ...shiftData,
-            standard: newCounts.standard,
-            extra: newCounts.extra,
-            additional: newCounts.additional,
-            latestDeliveryTimes: newDeliveryTimes,
-          });
+        const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+        let materials = load(KEYS.materials, []);
+        let blinds = load(KEYS.blinds, []);
+        let job = load(KEYS.job, null); // {id,name,createdAt}
+
+        // Tabs
+        const tabJob = $("#tab-job"),
+          tabSettings = $("#tab-settings");
+        const viewJob = $("#view-job"),
+          viewSettings = $("#view-settings");
+        const setTab = (which) => {
+          const isJob = which === "job";
+          tabJob.setAttribute("aria-selected", isJob ? "true" : "false");
+          tabSettings.setAttribute("aria-selected", isJob ? "false" : "true");
+          viewJob.classList.toggle("hidden", !isJob);
+          viewSettings.classList.toggle("hidden", isJob);
+          if (!isJob) $("#results").classList.add("hidden");
+        };
+        tabJob.addEventListener("click", () => setTab("job"));
+        tabSettings.addEventListener("click", () => setTab("settings"));
+
+        const renderStatus = () => {
+          $("#status-materials").textContent = materials.length;
+          $("#status-blinds").textContent = blinds.length;
+          $("#status-job").textContent = job?.name ? job.name : "No job";
         };
 
-        const handleMileageUpdate = () => {
-          const start = parseFloat(startMileage);
-          const current = parseFloat(currentMileage);
-          if (!isNaN(start) && !isNaN(current) && current >= start) {
-            const milesDriven = (current - start).toFixed(1);
-            setTotalMiles(milesDriven);
-            setShiftData({
-              ...shiftData,
-              currentMileage,
-              totalMiles: milesDriven,
-            });
-          } else {
-            alert("Please enter valid mileage values (current ≥ start).");
-          }
-        };
+        // Job gating
+        const applyJobState = () => {
+          const hasJob = !!job;
+          $("#job-setup-card")?.classList.toggle("hidden", hasJob);
+          $("#job-actions")?.classList.toggle("hidden", !hasJob);
 
-        const finalizeShift = () => {
-          const end = new Date();
-          const shiftRecord = {
-            startTime: startTime.toISOString(),
-            endTime: end.toISOString(),
-            standard: counts.standard,
-            extra: counts.extra,
-            additional: counts.additional,
-            earned: totalEarned,
-            notes: notes || "No notes added.", // Ensure that notes are saved
-            miles: totalMiles !== null ? totalMiles : "N/A",
-            settings: {
-              hourlyRate: settings.hourlyRate,
-              perDelivery: settings.perDelivery,
-              perExtra: settings.perExtra,
-              perAdditional: settings.perAdditional,
-            },
-            latestDeliveryTime: latestDeliveryTime
-              ? latestDeliveryTime.toISOString()
-              : "N/A",
-          };
-
-          const history = JSON.parse(localStorage.getItem("shifts") || "[]");
-          history.push(shiftRecord);
-          localStorage.setItem("shifts", JSON.stringify(history));
-
-          // Reset shiftData after saving it to history
-          setShiftData({
-            startMileage: "",
-            isClockedIn: false,
-            startTime: null,
-            endTime: null,
-            standard: 0,
-            extra: 0,
-            additional: 0,
-            notes: "",
-            currentMileage: "",
-            totalMiles: null,
-            latestDeliveryTimes: [],
-          });
-
-          setPage("home");
-        };
-
-        const handleEndShift = () => {
-          if (!currentMileage) {
-            alert("Please enter the current mileage before ending the shift.");
-            return;
-          }
-          // Show the mileage modal for confirmation before ending the shift
-          setShowMileageModal(true);
-        };
-
-        const confirmEndShift = () => {
-          setShowMileageModal(false); // Close the mileage modal
-          const endTime = new Date();
-          setShiftData({
-            ...shiftData,
-            endTime,
-            isClockedIn: false,
-          });
-
-          const shiftRecord = {
-            ...shiftData,
-            endTime,
-            standard: counts.standard,
-            extra: counts.extra,
-            additional: counts.additional,
-            earned: totalEarned,
-            notes: notes || "No notes added.",
-            miles: totalMiles !== null ? totalMiles : "N/A",
-            settings: {
-              hourlyRate: settings.hourlyRate,
-              perDelivery: settings.perDelivery,
-              perExtra: settings.perExtra,
-              perAdditional: settings.perAdditional,
-            },
-            latestDeliveryTime: latestDeliveryTime
-              ? latestDeliveryTime.toISOString()
-              : "N/A",
-          };
-
-          const shiftHistory = JSON.parse(
-            localStorage.getItem("shifts") || "[]"
+          $("#job-empty")?.classList.toggle(
+            "hidden",
+            !hasJob || blinds.length > 0,
           );
-          shiftHistory.push(shiftRecord);
-          localStorage.setItem("shifts", JSON.stringify(shiftHistory));
+          $("#job-table-wrap")?.classList.toggle(
+            "hidden",
+            !hasJob || !blinds.length,
+          );
 
-          // Reset shiftData after ending the shift
-          setShiftData({
-            startMileage: "",
-            isClockedIn: false,
-            startTime: null,
-            endTime: null,
-            standard: 0,
-            extra: 0,
-            additional: 0,
-            notes: "",
-            currentMileage: "",
-            totalMiles: null,
-            latestDeliveryTimes: [],
-          });
+          $("#job-bottom-actions")?.classList.toggle(
+            "hidden",
+            !hasJob || blinds.length === 0,
+          );
 
-          setPage("home");
+          $("#btn-calc").disabled = !hasJob;
+
+          const title = job?.name || "Job";
+          const headingEl = $("#job-heading");
+          if (headingEl) headingEl.textContent = title;
+          const subEl = $("#job-subtext");
+          if (subEl) {
+            subEl.textContent = hasJob
+              ? "Add blinds, select materials, then tap Calculate."
+              : "Create a job, then add blinds. Select a material per blind. Click Calculate.";
+          }
         };
 
-        const cancelEndShift = () => {
-          setShowMileageModal(false); // Close the mileage modal without ending the shift
-        };
+        // Create job
+        $("#btn-create-job")?.addEventListener("click", () => {
+          const nameEl = $("#job-name");
+          const errEl = $("#err-job-name");
+          if (errEl) {
+            errEl.classList.add("hidden");
+            errEl.textContent = "";
+          }
 
-        const handleMileageConfirm = () => {
-          if (!currentMileage) {
-            alert("Current mileage cannot be empty.");
+          const name = String(nameEl?.value || "").trim();
+          if (!name) {
+            if (errEl) {
+              errEl.textContent = "Please enter a job name.";
+              errEl.classList.remove("hidden");
+            } else alert("Please enter a job name.");
             return;
           }
-          handleMileageUpdate(); // Update mileage first
-          setShowEndModal(true); // Show the end shift modal
+
+          job = { id: uid(), name, createdAt: new Date().toISOString() };
+          blinds = [];
+          save(KEYS.job, job);
+          save(KEYS.blinds, blinds);
+          $("#results").classList.add("hidden");
+          renderJob();
+          renderStatus();
+          applyJobState();
+        });
+
+        // New Job
+        $("#btn-new-job")?.addEventListener("click", () => {
+          if (
+            !confirm(
+              "Start a NEW job? This will clear the current job and all blinds.",
+            )
+          )
+            return;
+          job = null;
+          blinds = [];
+          save(KEYS.job, job);
+          save(KEYS.blinds, blinds);
+          $("#results").classList.add("hidden");
+          renderJob();
+          renderStatus();
+          applyJobState();
+          $("#job-name")?.focus();
+        });
+
+        // Add blind
+        $("#btn-add-blind")?.addEventListener("click", () => {
+          if (!job) {
+            alert("Create a job first.");
+            return;
+          }
+          const defaultMat = materials[0]?.id || "";
+          blinds.push({
+            id: uid(),
+            blindNo: "",
+            widthMm: NaN,
+            dropMm: NaN,
+            materialId: defaultMat,
+          });
+          save(KEYS.blinds, blinds);
+          $("#results").classList.add("hidden");
+          renderJob();
+          renderStatus();
+          applyJobState();
+        });
+        $("#btn-add-blind-bottom")?.addEventListener("click", () => {
+          $("#btn-add-blind")?.click();
+        });
+
+        // Clear blinds
+        $("#btn-clear-job")?.addEventListener("click", () => {
+          if (!job) return;
+          if (!blinds.length) return;
+          if (!confirm("Clear ALL blinds for this job?")) return;
+          blinds = [];
+          save(KEYS.blinds, blinds);
+          $("#results").classList.add("hidden");
+          renderJob();
+          renderStatus();
+          applyJobState();
+        });
+
+        // Settings: Material form + table (CRUD)
+        const matForm = $("#material-form");
+        const matId = $("#mat-id"),
+          matName = $("#mat-name"),
+          matMesh = $("#mat-mesh"),
+          matSolid = $("#mat-solid"),
+          matSet = $("#mat-set"),
+          matMinus = $("#mat-minus");
+        const matFormTitle = $("#mat-form-title"),
+          matFormMode = $("#mat-form-mode");
+
+        const clearMatErrors = () =>
+          ["name", "mesh", "solid", "minus"].forEach((k) => {
+            const el = $("#err-mat-" + k);
+            if (el) {
+              el.classList.add("hidden");
+              el.textContent = "";
+            }
+          });
+        const showMatError = (field, msg) => {
+          const el = $("#err-mat-" + field);
+          if (el) {
+            el.textContent = msg;
+            el.classList.remove("hidden");
+          }
         };
 
-        return (
-          <main style={{ padding: "1.5rem" }}>
-            {/* Main Shift Page Content */}
-            <section style={{ marginBottom: "1rem" }}>
-              <strong>Start Time:</strong> {startTime.toLocaleTimeString()}
-            </section>
+        const updateSetPreview = () => {
+          const mesh = toInt(matMesh.value),
+            solid = toInt(matSolid.value);
+          const setLen =
+            (Number.isFinite(mesh) ? mesh : 0) +
+            (Number.isFinite(solid) ? solid : 0);
+          matSet.value = setLen > 0 ? String(setLen) : "";
+        };
+        matMesh.addEventListener("input", updateSetPreview);
+        matSolid.addEventListener("input", updateSetPreview);
 
-            <section style={{ marginBottom: "1.5rem" }}>
-              <div
-                style={{
-                  padding: "0.75rem",
-                  background: "#2c2c2e",
-                  borderRadius: "8px",
-                  marginBottom: "1rem",
-                }}
-              >
-                <strong>Duration:</strong> {String(hours).padStart(2, "0")}:
-                {String(minutes).padStart(2, "0")}:
-                {String(seconds).padStart(2, "0")}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "0.75rem",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div
-                  style={{
-                    flex: "1 1 30%",
-                    padding: "0.75rem",
-                    background: "#2c2c2e",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <strong>Wage:</strong> <br /> £{validWage}
-                </div>
-                <div
-                  style={{
-                    flex: "1 1 30%",
-                    padding: "0.75rem",
-                    background: "#2c2c2e",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <strong>Deliveries:</strong> <br /> £{deliveryTotal}
-                </div>
-                <div
-                  style={{
-                    flex: "1 1 30%",
-                    background: "#2e7d32",
-                    color: "white",
-                    fontWeight: "bold",
-                    textAlign: "center",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    padding: "0.75rem",
-                    borderRadius: "8px",
-                  }}
-                >
-                  <strong>Total</strong>
-                  <div style={{ fontSize: "1.5rem", marginTop: "0.25rem" }}>
-                    £{totalEarned}
-                  </div>
-                </div>
-                {/* Latest Delivery Section: moved after Total Earnings, before Standard Deliveries */}
-                <div
-                  style={{
-                    flex: "1 1 100%",
-                    background: "#2c2c2e",
-                    borderRadius: "8px",
-                    marginTop: "0.75rem",
-                    padding: "0.75rem",
-                    color: "#fff",
-                    fontWeight: "bold",
-                  }}
-                >
-                  <strong>Latest Delivery:</strong>
-                  <div
-                    style={{
-                      marginTop: "0.25rem",
-                      fontSize: "1.1rem",
-                      fontWeight: "normal",
-                      opacity: 0.85,
-                    }}
-                  >
-                    {latestDeliveryTimeAgo}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Adjust Delivery Counts */}
-            <style>
-              {`
-              .hold-btn {
-                position: relative;
-                overflow: hidden;
-                border: none;
-                border-radius: 8px;
-                font-size: 1.25rem;
-                min-width: 48px;
-                padding: 0.5rem 1.2rem;
-                color: white;
-                cursor: pointer;
-                outline: none;
-                background-color: #0a84ff;
-                z-index: 1;
-                perspective: 800px;
-                transform-style: preserve-3d;
-                transition: transform 0.6s ease, background 0.1s linear, box-shadow 0.15s ease-out;
-              }
-              .hold-btn.remove {
-                background-color: #ff3b30;
-              }
-              .hold-btn.hold-progress {
-                /* Removed transform scaling */
-              }
-              .hold-btn.pressed {
-                box-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.5);
-                transition: box-shadow 0.15s ease-out;
-              }
-              .hold-btn .progress-bar {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                height: 5px;
-                background: linear-gradient(90deg, #0f0, #0a84ff);
-                border-radius: 0 0 8px 8px;
-                z-index: 2;
-                pointer-events: none;
-                transition: width 0.05s linear;
-              }
-              .hold-btn.remove .progress-bar {
-                background: linear-gradient(90deg, #ff3b30, #ff9c8c);
-              }
-              .hold-btn .radial-gradient-effect {
-                position: absolute;
-                top: 50%; left: 50%;
-                width: 300%;
-                height: 300%;
-                pointer-events: none;
-                transform: translate(-50%, -50%);
-                border-radius: 50%;
-                opacity: 0.6;
-                animation: radial-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-                z-index: 5;
-              }
-              .hold-btn .radial-gradient-effect.add {
-                background: radial-gradient(circle, #2fff8a 0%, #0a84ff 80%, transparent 100%);
-              }
-              .hold-btn .radial-gradient-effect.remove {
-                background: radial-gradient(circle, #ff3b30 0%, #ff9c8c 80%, transparent 100%);
-              }
-              @keyframes radial-pop {
-                0% { opacity: 0.7; transform: translate(-50%, -50%) scale(0.7);}
-                60% { opacity: 0.8; }
-                90% { opacity: 0.3; }
-                100% { opacity: 0; transform: translate(-50%, -50%) scale(1.7);}
-              }
-              `}
-            </style>
-            <section
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "1rem",
-                marginBottom: "1.5rem",
-              }}
-            >
-              {["standard", "extra", "additional"].map((type) => (
-                <div
-                  key={type}
-                  style={{
-                    position: "relative",
-                    overflow: "hidden",
-                    padding: "1rem",
-                    background:
-                      holdState.gradient === "add" && holdState.type === type
-                        ? "rgb(46, 125, 50)"
-                        : holdState.gradient === "remove" &&
-                          holdState.type === type
-                        ? "rgb(155, 32, 32)"
-                        : "#2c2c2e",
-                    transition: "background 0.15s ease",
-                    borderRadius: "8px",
-                  }}
-                >
-                  {holdState.gradient === "add" && holdState.type === type && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top:
-                          holdState.clickY != null
-                            ? holdState.clickY + "px"
-                            : "50%",
-                        left:
-                          holdState.clickX != null
-                            ? holdState.clickX + "px"
-                            : "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: "0",
-                        height: "0",
-                        borderRadius: "50%",
-                        background:
-                          "radial-gradient(circle, #2fff8a 0%, transparent 80%)",
-                        animation: "ripple-effect 0.7s forwards",
-                        pointerEvents: "none",
-                        zIndex: 1,
-                      }}
-                    />
-                  )}
-                  {holdState.gradient === "remove" &&
-                    holdState.type === type && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top:
-                            holdState.clickY != null
-                              ? holdState.clickY + "px"
-                              : "50%",
-                          left:
-                            holdState.clickX != null
-                              ? holdState.clickX + "px"
-                              : "50%",
-                          transform: "translate(-50%, -50%)",
-                          width: "0",
-                          height: "0",
-                          borderRadius: "50%",
-                          background:
-                            "radial-gradient(circle, #ff3b30 0%, transparent 80%)",
-                          animation: "ripple-effect 0.7s forwards",
-                          pointerEvents: "none",
-                          zIndex: 1,
-                        }}
-                      />
-                    )}
-                  {/* Parent loading overlay */}
-                  {holdState.isHolding && holdState.type === type && (
-                    <div
-                      className={
-                        "parent-loading-overlay" +
-                        (holdState.action === "remove" ? " remove" : "") +
-                        (holdState.reversing ? " reverse" : "")
-                      }
-                      style={{
-                        opacity: holdState.progress,
-                        clipPath:
-                          holdState.action === "add"
-                            ? `inset(0% ${
-                                100 - holdState.progress * 100
-                              }% 0% 0%)`
-                            : `inset(0% 0% 0% ${
-                                100 - holdState.progress * 100
-                              }%)`,
-                      }}
-                    />
-                  )}
-                  <div
-                    style={{
-                      fontWeight: "bold",
-                      textTransform: "capitalize",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    {type}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    {/* Remove button */}
-                    <button
-                      type="button"
-                      className={
-                        "hold-btn remove" +
-                        (holdState.isHolding &&
-                        holdState.type === type &&
-                        holdState.action === "remove"
-                          ? " hold-progress pressed"
-                          : "")
-                      }
-                      onMouseDown={(e) =>
-                        handleButtonHoldStart(type, "remove", e)
-                      }
-                      onMouseUp={handleButtonHoldEnd}
-                      onMouseLeave={handleButtonHoldEnd}
-                      onTouchStart={(e) => {
-                        e.preventDefault();
-                        handleButtonHoldStart(type, "remove", e.touches[0]);
-                      }}
-                      onTouchEnd={handleButtonHoldEnd}
-                      style={{
-                        userSelect: "none",
-                        WebkitUserSelect: "none",
-                        MozUserSelect: "none",
-                        msUserSelect: "none",
-                      }}
-                      aria-label={`Remove ${type} delivery`}
-                    >
-                      −{/* Radial effect */}
-                      {holdState.gradient === "remove" &&
-                        holdState.type === type && (
-                          <div className="radial-gradient-effect remove" />
-                        )}
-                    </button>
-                    <div style={{ fontSize: "1.5rem" }}>{counts[type]}</div>
-                    {/* Add button */}
-                    <button
-                      type="button"
-                      className={
-                        "hold-btn" +
-                        (holdState.isHolding &&
-                        holdState.type === type &&
-                        holdState.action === "add"
-                          ? " hold-progress pressed"
-                          : "")
-                      }
-                      onMouseDown={(e) => handleButtonHoldStart(type, "add", e)}
-                      onMouseUp={handleButtonHoldEnd}
-                      onMouseLeave={handleButtonHoldEnd}
-                      onTouchStart={(e) => {
-                        e.preventDefault();
-                        handleButtonHoldStart(type, "add", e.touches[0]);
-                      }}
-                      onTouchEnd={handleButtonHoldEnd}
-                      style={{
-                        userSelect: "none",
-                        WebkitUserSelect: "none",
-                        MozUserSelect: "none",
-                        msUserSelect: "none",
-                      }}
-                      aria-label={`Add ${type} delivery`}
-                    >
-                      ＋{/* Radial effect */}
-                      {holdState.gradient === "add" &&
-                        holdState.type === type && (
-                          <div className="radial-gradient-effect add" />
-                        )}
-                    </button>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.92rem",
-                      color: "#bbb",
-                      marginTop: "0.35rem",
-                      fontStyle: "italic",
-                      textAlign: "center",
-                    }}
-                  >
-                    Hold for 3 seconds to{" "}
-                    {type === "standard" ? "add/remove" : "adjust"} deliveries.
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            {/* Mileage Tracker */}
-            <section
-              style={{
-                background: "#2c2c2e",
-                borderRadius: "12px",
-                padding: "1.25rem",
-                marginBottom: "2rem",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-              }}
-            >
-              <h3 style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-                Mileage Tracker
-              </h3>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "1rem",
-                  marginBottom: "1rem",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <label
-                    style={{
-                      color: "#bbb",
-                      fontSize: "0.9rem",
-                      marginBottom: "0.25rem",
-                      display: "block",
-                    }}
-                  >
-                    Start
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 12000"
-                    value={startMileage}
-                    onChange={(e) => setStartMileage(e.target.value)}
-                    style={{
-                      width: "85%",
-                      padding: "0.75rem",
-                      fontSize: "1rem",
-                      borderRadius: "10px",
-                      border: "none",
-                      background: "#1c1c1e",
-                      color: "white",
-                    }}
-                  />
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <label
-                    style={{
-                      color: "#bbb",
-                      fontSize: "0.9rem",
-                      marginBottom: "0.25rem",
-                      display: "block",
-                    }}
-                  >
-                    Current
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 12047.5"
-                    value={currentMileage}
-                    onChange={(e) => setCurrentMileage(e.target.value)}
-                    style={{
-                      width: "85%",
-                      padding: "0.75rem",
-                      fontSize: "1rem",
-                      borderRadius: "10px",
-                      border: "none",
-                      background: "#1c1c1e",
-                      color: "white",
-                    }}
-                  />
-                </div>
-              </div>
-
-              <button
-                onClick={handleMileageUpdate}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  padding: "0.75rem",
-                  borderRadius: "10px",
-                  backgroundColor: "#0a84ff",
-                  color: "white",
-                  fontSize: "1rem",
-                  border: "none",
-                  cursor: "pointer",
-                  marginBottom: totalMiles !== null ? "1rem" : "0",
-                }}
-              >
-                Update Mileage
-              </button>
-
-              {totalMiles !== null && (
-                <div
-                  style={{
-                    marginTop: "0.5rem",
-                    background: "#3a3a3c",
-                    borderRadius: "8px",
-                    padding: "1rem",
-                    textAlign: "center",
-                    fontSize: "1.2rem",
-                    fontWeight: "bold",
-                    color: "lightgreen",
-                  }}
-                >
-                  Total Miles Driven: {totalMiles} mi
-                </div>
-              )}
-            </section>
-
-            {/* End Shift Button */}
-            <button
-              onClick={handleEndShift}
-              className="button danger"
-              style={{
-                marginTop: "1.5rem",
-              }}
-            >
-              End Shift
-            </button>
-
-            {/* Back to Home Button */}
-            <button
-              onClick={() => setPage("home")}
-              className="button"
-              style={{
-                marginTop: "1.5rem",
-              }}
-            >
-              Back to Home
-            </button>
-
-            {/* Mileage Modal */}
-            {showMileageModal && (
-              <div className="modal">
-                <div
-                  className="modal-content"
-                  style={{ padding: "2rem", textAlign: "center" }}
-                >
-                  <h2 style={{ marginBottom: "1rem", fontSize: "1.5rem" }}>
-                    Confirm Mileage
-                  </h2>
-                  <p
-                    style={{
-                      fontSize: "1.2rem",
-                      color: "#ccc",
-                      marginBottom: "2rem",
-                    }}
-                  >
-                    Please confirm your current mileage by entering the latest
-                    reading from your car's odometer.
-                  </p>
-                  <div
-                    style={{
-                      background: "#1c1c1e",
-                      padding: "1rem",
-                      borderRadius: "8px",
-                      marginBottom: "2rem",
-                      fontSize: "1.3rem",
-                      color: "white",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Current Mileage: {currentMileage}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "1rem",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <button
-                      className="button"
-                      onClick={cancelEndShift}
-                      style={{
-                        backgroundColor: "#ff3b30",
-                        flex: 1,
-                        padding: "0.75rem",
-                        fontSize: "1rem",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="button"
-                      onClick={handleMileageConfirm}
-                      style={{
-                        backgroundColor: "#34c759",
-                        flex: 1,
-                        padding: "0.75rem",
-                        fontSize: "1rem",
-                      }}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* End Shift Confirmation Modal */}
-            {showEndModal && (
-              <div className="modal">
-                <div
-                  className="modal-content"
-                  style={{
-                    width: "100%",
-                    maxWidth: "100%",
-                    height: "100%",
-                    maxHeight: "100%",
-                    background: "#2c2c2e",
-                    padding: "1.5rem",
-                    borderRadius: "0",
-                    overflowY: "auto",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <h3
-                    style={{
-                      textAlign: "center",
-                      marginBottom: "1.5rem",
-                      color: "#fff",
-                    }}
-                  >
-                    End Shift Confirmation
-                  </h3>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "1rem",
-                      color: "#fff",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    <div>
-                      <strong>Start Time:</strong>
-                      <div>{startTime.toLocaleTimeString()}</div>
-                    </div>
-                    <div>
-                      <strong>End Time:</strong>
-                      <div>{new Date().toLocaleTimeString()}</div>
-                    </div>
-                  </div>
-
-                  {/* Delivery Counts Section */}
-                  <div
-                    style={{
-                      padding: "1rem",
-                      background: "#3a3a3c",
-                      borderRadius: "8px",
-                      marginBottom: "1rem",
-                      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.3)",
-                      color: "#fff",
-                    }}
-                  >
-                    <strong>Deliveries Summary:</strong>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "1rem",
-                      }}
-                    >
-                      <div>
-                        <strong>Standard:</strong> {counts.standard}
-                      </div>
-                      <div>
-                        <strong>Extra:</strong> {counts.extra}
-                      </div>
-                      <div>
-                        <strong>Additional:</strong> {counts.additional}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Earnings Section */}
-                  <div
-                    style={{
-                      padding: "1rem",
-                      background: "#4CAF50",
-                      borderRadius: "8px",
-                      marginBottom: "1rem",
-                      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.3)",
-                      color: "#fff",
-                    }}
-                  >
-                    <strong>Earnings Summary:</strong>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginTop: "1rem",
-                      }}
-                    >
-                      <div>
-                        <strong>Wage:</strong> £{validWage}
-                      </div>
-                      <div>
-                        <strong>Deliveries:</strong> £{deliveryTotal}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Total Earnings Section */}
-                  <div
-                    style={{
-                      padding: "1rem",
-                      background: "#2c2c2e",
-                      borderRadius: "8px",
-                      marginBottom: "1rem",
-                      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.3)",
-                      color: "#fff",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    <strong>Total Earnings:</strong>
-                    <div
-                      style={{
-                        fontSize: "1.5rem",
-                        color: "lightgreen",
-                        textAlign: "center",
-                        marginTop: "0.75rem",
-                      }}
-                    >
-                      £{totalEarned}
-                    </div>
-                  </div>
-
-                  {/* Miles Driven Section */}
-                  <div
-                    style={{
-                      padding: "1rem",
-                      background: "#3a3a3c",
-                      borderRadius: "8px",
-                      marginBottom: "1rem",
-                      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.3)",
-                      color: "#fff",
-                    }}
-                  >
-                    <strong>Total Miles Driven:</strong>
-                    <div
-                      style={{
-                        fontSize: "1.2rem",
-                        fontWeight: "bold",
-                        color: "#fff",
-                        textAlign: "center",
-                        marginTop: "0.75rem",
-                      }}
-                    >
-                      {totalMiles} mi
-                    </div>
-                  </div>
-
-                  {/* Notes Section */}
-                  <div
-                    style={{
-                      padding: "1rem",
-                      background: "#3a3a3c",
-                      borderRadius: "8px",
-                      marginBottom: "1rem",
-                      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.3)",
-                      color: "#fff",
-                    }}
-                  >
-                    <strong>Notes:</strong>
-                    <div
-                      style={{
-                        fontSize: "1.2rem",
-                        fontWeight: "bold",
-                        color: "#fff",
-                        textAlign: "center",
-                        marginTop: "0.75rem",
-                        marginBottom: "0.5rem",
-                        wordWrap: "break-word",
-                        overflowWrap: "break-word",
-                        whiteSpace: "pre-wrap",
-                        maxWidth: "100%",
-                      }}
-                    >
-                      {notes || "No notes added."}
-                    </div>
-                    <button
-                      className="button"
-                      style={{
-                        backgroundColor: "#0a84ff",
-                        width: "100%",
-                        marginTop: "0.5rem",
-                        fontSize: "1rem",
-                        padding: "0.5rem",
-                      }}
-                      onClick={() => {
-                        setEditNotes(notes);
-                        setShowNotesModal(true);
-                      }}
-                    >
-                      Edit Notes
-                    </button>
-                  </div>
-
-                  {/* Confirm and Cancel Buttons */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: "1rem",
-                      marginTop: "1rem",
-                    }}
-                  >
-                    <button
-                      className="button"
-                      onClick={() => {
-                        setShowEndModal(false);
-                        setShowMileageModal(false);
-                      }}
-                      style={{
-                        flex: 1,
-                        backgroundColor: "#ff3b30",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="button"
-                      onClick={confirmEndShift}
-                      style={{
-                        flex: 1,
-                        backgroundColor: "#34c759",
-                      }}
-                    >
-                      Confirm
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Notes Edit Modal */}
-            {showNotesModal && (
-              <div className="modal">
-                <div
-                  className="modal-content"
-                  style={{
-                    maxWidth: "500px",
-                    background: "#232325",
-                    color: "#fff",
-                    borderRadius: "10px",
-                  }}
-                >
-                  <h3 style={{ textAlign: "center", marginBottom: "1rem" }}>
-                    Edit Notes
-                  </h3>
-                  <textarea
-                    value={editNotes}
-                    onChange={(e) => setEditNotes(e.target.value)}
-                    style={{
-                      width: "100%",
-                      minHeight: "100px",
-                      borderRadius: "8px",
-                      border: "none",
-                      background: "#2c2c2e",
-                      color: "#fff",
-                      fontSize: "1rem",
-                      padding: "0.75rem",
-                      marginBottom: "1rem",
-                      resize: "vertical",
-                    }}
-                    placeholder="Add shift notes here..."
-                  />
-                  <div style={{ display: "flex", gap: "1rem" }}>
-                    <button
-                      className="button"
-                      style={{ flex: 1, backgroundColor: "#0a84ff" }}
-                      onClick={() => {
-                        setNotes(editNotes);
-                        setShowNotesModal(false);
-                      }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      className="button danger"
-                      style={{ flex: 1 }}
-                      onClick={() => setShowNotesModal(false)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </main>
+        const setMatFormMode = (mode, m = null) => {
+          clearMatErrors();
+          if (mode === "new") {
+            matFormTitle.textContent = "Add Material";
+            matFormMode.textContent = "New";
+            matId.value = "";
+            matName.value = "";
+            matMesh.value = "";
+            matSolid.value = "";
+            matMinus.value = "";
+            matSet.value = "";
+            matName.focus();
+          } else {
+            matFormTitle.textContent = "Edit Material";
+            matFormMode.textContent = "Editing";
+            matId.value = m.id;
+            matName.value = m.name;
+            matMesh.value = m.meshMm;
+            matSolid.value = m.solidMm;
+            matMinus.value = m.l2MinusMm;
+            matSet.value = (toInt(m.meshMm) || 0) + (toInt(m.solidMm) || 0);
+            matName.focus();
+          }
+        };
+        $("#btn-cancel-edit")?.addEventListener("click", () =>
+          setMatFormMode("new"),
         );
-      }
-
-      function formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-GB", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
+        $("#btn-add-material")?.addEventListener("click", () => {
+          setTab("settings");
+          setMatFormMode("new");
+          window.scrollTo({ top: 0, behavior: "smooth" });
         });
-      }
 
-      function formatTime(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      }
+        const validateMaterial = (c) => {
+          clearMatErrors();
+          let ok = true;
 
-      function HistoryPage({ settings, setPage }) {
-        const [history, setHistory] = useState([]);
-        const [filtered, setFiltered] = useState([]);
-        const [showStats, setShowStats] = useState(false);
-        const [startDate, setStartDate] = useState("");
-        const [endDate, setEndDate] = useState("");
+          const name = String(c.name ?? "").trim();
+          const mesh = toInt(c.meshMm),
+            solid = toInt(c.solidMm),
+            minus = toInt(c.l2MinusMm);
 
-        const [editShift, setEditShift] = useState(null); // Track the shift being edited
-
-        useEffect(() => {
-          // Retrieve stored shifts from localStorage
-          const stored = JSON.parse(localStorage.getItem("shifts") || "[]");
-          setHistory(stored);
-          setFiltered(stored);
-
-          // Check if lastPayDate is available in settings
-          if (settings.lastPayDate) {
-            const [year, month, day] = settings.lastPayDate.split("-"); // Split by "-"
-            if (day && month && year) {
-              // Format it to yyyy-mm-dd
-              const formattedDate = `${year}-${month.padStart(
-                2,
-                "0"
-              )}-${day.padStart(2, "0")}`;
-              // Set the start date filter
-              setStartDate(formattedDate);
+          if (!name) {
+            showMatError("name", "Name is required.");
+            ok = false;
+          } else {
+            const key = name.toLowerCase();
+            const clash = materials.some(
+              (m) =>
+                m.id !== c.id && String(m.name).trim().toLowerCase() === key,
+            );
+            if (clash) {
+              showMatError("name", "Name must be unique.");
+              ok = false;
             }
           }
-        }, [settings]);
-
-        useEffect(() => {
-          handleFilter(); // Trigger the filter whenever startDate or endDate is set
-        }, [startDate, endDate]);
-
-        const handleFilter = () => {
-          let filteredHistory = history;
-
-          if (startDate) {
-            filteredHistory = filteredHistory.filter((shift) => {
-              return new Date(shift.startTime) >= new Date(startDate);
-            });
+          if (!Number.isFinite(mesh) || mesh <= 0) {
+            showMatError("mesh", "Mesh must be a positive whole number (mm).");
+            ok = false;
           }
-
-          if (endDate) {
-            filteredHistory = filteredHistory.filter((shift) => {
-              return new Date(shift.endTime) <= new Date(endDate);
-            });
-          }
-
-          setFiltered(filteredHistory);
-        };
-
-        const handleDeleteRecord = (shift) => {
-          const confirmDelete = window.confirm(
-            `Are you sure you want to delete the shift starting at ${formatTime(
-              shift.startTime
-            )}?`
-          );
-
-          if (confirmDelete) {
-            const updatedHistory = history.filter(
-              (item) => item.startTime !== shift.startTime
+          if (!Number.isFinite(solid) || solid <= 0) {
+            showMatError(
+              "solid",
+              "Solid must be a positive whole number (mm).",
             );
-
-            setHistory(updatedHistory);
-            setFiltered(updatedHistory);
-
-            localStorage.setItem("shifts", JSON.stringify(updatedHistory));
+            ok = false;
           }
+          if (!Number.isFinite(minus) || minus < 0) {
+            showMatError("minus", "Minus must be 0 or greater (mm).");
+            ok = false;
+          }
+
+          return ok;
         };
 
-        const handleUpdateRecord = (shift) => {
-          // Open the modal with the shift data
-          setEditShift({ ...shift }); // Copy the shift data into the state for editing
-        };
-
-        const handleSaveEdit = () => {
-          // Use the shift's saved settings (from editShift.settings), not current settings
-          const shiftSettings = editShift.settings || settings;
-
-          // Function to calculate wage based on shift settings (hourly rate)
-          function calculateWage(startTime, endTime, shiftSettings) {
-            const hourlyRate = parseFloat(shiftSettings.hourlyRate || 0);
-            const start = new Date(startTime);
-            const end = new Date(endTime);
-            const secondsElapsed = Math.floor((end - start) / 1000);
-            const minutesElapsed = Math.floor(secondsElapsed / 60);
-            const wage = (minutesElapsed / 60) * hourlyRate;
-            return isNaN(wage) ? 0 : wage.toFixed(2);
-          }
-
-          // Function to calculate delivery earnings based on shift settings
-          function deliveryEarnings(shift, shiftSettings) {
-            const perDelivery = parseFloat(shiftSettings.perDelivery || 0);
-            const perExtra = parseFloat(shiftSettings.perExtra || 0);
-            const perAdditional = parseFloat(shiftSettings.perAdditional || 0);
-            return (
-              (shift.standard || 0) * perDelivery +
-              (shift.extra || 0) * perExtra +
-              (shift.additional || 0) * perAdditional
-            ).toFixed(2);
-          }
-
-          // Recalculate wage and delivery earnings based on the shift's settings
-          const wage = calculateWage(
-            editShift.startTime,
-            editShift.endTime,
-            shiftSettings
-          );
-          const dEarnings = deliveryEarnings(editShift, shiftSettings);
-          const total = (parseFloat(wage) + parseFloat(dEarnings)).toFixed(2);
-
-          // Update the editShift object with the recalculated totals
-          const newEditShift = {
-            ...editShift,
-            earned: total, // Updated total earnings based on shift settings
-            wage: wage, // Updated wage based on shift settings
-            deliveryEarnings: dEarnings, // Updated delivery earnings based on shift settings
+        matForm?.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const id = matId.value || uid();
+          const c = {
+            id,
+            name: matName.value.trim(),
+            meshMm: toInt(matMesh.value),
+            solidMm: toInt(matSolid.value),
+            l2MinusMm: toInt(matMinus.value),
           };
+          if (!validateMaterial(c)) return;
 
-          // Update the shift record in history with the new values
-          const updatedShifts = history.map((shift) =>
-            shift.startTime === editShift.startTime ? newEditShift : shift
-          );
-          setHistory(updatedShifts);
-          setFiltered(updatedShifts);
-          localStorage.setItem("shifts", JSON.stringify(updatedShifts));
-          setEditShift(null); // Close the modal
-        };
+          const idx = materials.findIndex((m) => m.id === id);
+          if (idx >= 0) materials[idx] = c;
+          else materials.push(c);
 
-        const handleCancelEdit = () => {
-          setEditShift(null); // Close the modal without saving
-        };
+          save(KEYS.materials, materials);
+          renderMaterials();
+          renderJob();
+          renderStatus();
+          setMatFormMode("new");
+        });
 
-        const deliveryEarnings = (shift) => {
-          const perDelivery = parseFloat(settings.perDelivery || 0);
-          const perExtra = parseFloat(settings.perExtra || 0);
-          const perAdditional = parseFloat(settings.perAdditional || 0);
-          return (
-            (shift.standard || 0) * perDelivery +
-            (shift.extra || 0) * perExtra +
-            (shift.additional || 0) * perAdditional
-          );
-        };
+        const renderMaterials = () => {
+          const empty = $("#materials-empty"),
+            wrap = $("#materials-table-wrap"),
+            tbody = $("#materials-tbody");
+          if (!tbody) return;
+          tbody.innerHTML = "";
+          if (!materials.length) {
+            empty?.classList.remove("hidden");
+            wrap?.classList.add("hidden");
+            return;
+          }
+          empty?.classList.add("hidden");
+          wrap?.classList.remove("hidden");
 
-        const calculateStats = (data) => {
-          const totalShifts = data.length;
-          let totalWage = 0;
-          let totalDelivery = 0;
-          let totalCombined = 0;
-          let totalMiles = 0;
-
-          data.forEach((shift) => {
-            totalWage += parseFloat(shift.earned);
-            totalDelivery += deliveryEarnings(shift);
-            totalCombined += parseFloat(shift.earned);
-            totalMiles += shift.miles !== "N/A" ? parseFloat(shift.miles) : 0;
+          materials.forEach((m) => {
+            const setLen = (toInt(m.meshMm) || 0) + (toInt(m.solidMm) || 0);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+        <td><strong>${esc(m.name)}</strong></td>
+        <td style="font-family:var(--mono)">${esc(String(m.meshMm))}</td>
+        <td style="font-family:var(--mono)">${esc(String(m.solidMm))}</td>
+        <td style="font-family:var(--mono)">${esc(String(setLen))}</td>
+        <td style="font-family:var(--mono)">${esc(String(m.l2MinusMm))}</td>
+        <td>
+          <div class="actions">
+            <button class="btn small" data-action="edit-material" data-id="${m.id}" type="button">Edit</button>
+            <button class="btn small danger" data-action="delete-material" data-id="${m.id}" type="button">Delete</button>
+          </div>
+        </td>`;
+            tbody.appendChild(tr);
           });
+        };
+
+        $("#materials-tbody")?.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-action]");
+          if (!btn) return;
+          const action = btn.dataset.action,
+            id = btn.dataset.id;
+          const m = materials.find((x) => x.id === id);
+          if (!m) return;
+
+          if (action === "edit-material") {
+            setMatFormMode("edit", m);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }
+          if (action === "delete-material") {
+            const inUse = blinds.filter((b) => b.materialId === id).length;
+            if (inUse > 0) {
+              alert(
+                `Cannot delete: used by ${inUse} blind(s). Change those blinds first.`,
+              );
+              return;
+            }
+            if (!confirm(`Delete material "${m.name}"?`)) return;
+            materials = materials.filter((x) => x.id !== id);
+            save(KEYS.materials, materials);
+            renderMaterials();
+            renderJob();
+            renderStatus();
+          }
+        });
+
+        // Export / Import / Reset
+        $("#btn-export")?.addEventListener("click", () => {
+          const payload = {
+            version: 3,
+            exportedAt: new Date().toISOString(),
+            job,
+            materials,
+            blinds,
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "bbvsions-export.json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        });
+
+        const importFile = $("#import-file");
+        $("#btn-import")?.addEventListener("click", () => importFile?.click());
+        importFile?.addEventListener("change", async () => {
+          const file = importFile.files?.[0];
+          if (!file) return;
+          try {
+            const obj = JSON.parse(await file.text());
+            if (
+              !obj ||
+              !Array.isArray(obj.materials) ||
+              !Array.isArray(obj.blinds)
+            ) {
+              alert(
+                "Invalid JSON. Expected { materials: [], blinds: [] } (and optional job).",
+              );
+              return;
+            }
+            materials = obj.materials
+              .map((m) => ({
+                id: m.id || uid(),
+                name: String(m.name ?? "").trim(),
+                meshMm: toInt(m.meshMm),
+                solidMm: toInt(m.solidMm),
+                l2MinusMm: toInt(m.l2MinusMm),
+              }))
+              .filter(
+                (m) =>
+                  m.name &&
+                  Number.isFinite(m.meshMm) &&
+                  m.meshMm > 0 &&
+                  Number.isFinite(m.solidMm) &&
+                  m.solidMm > 0 &&
+                  Number.isFinite(m.l2MinusMm) &&
+                  m.l2MinusMm >= 0,
+              );
+
+            blinds = obj.blinds.map((b) => ({
+              id: b.id || uid(),
+              blindNo: String(b.blindNo ?? "").trim(),
+              widthMm: toInt(b.widthMm),
+              dropMm: toInt(b.dropMm),
+              materialId: String(b.materialId ?? ""),
+            }));
+
+            job =
+              obj.job && typeof obj.job === "object"
+                ? {
+                    id: String(obj.job.id || uid()),
+                    name: String(obj.job.name || "Untitled job"),
+                    createdAt: obj.job.createdAt || new Date().toISOString(),
+                  }
+                : null;
+
+            save(KEYS.materials, materials);
+            save(KEYS.blinds, blinds);
+            save(KEYS.job, job);
+
+            $("#results").classList.add("hidden");
+            renderMaterials();
+            renderJob();
+            renderStatus();
+            applyJobState();
+            setTab("job");
+            alert("Import complete.");
+          } catch (err) {
+            alert("Import failed: " + err.message);
+          } finally {
+            importFile.value = "";
+          }
+        });
+
+        $("#btn-reset-all")?.addEventListener("click", () => {
+          if (!confirm("Reset ALL saved materials and jobs on this device?"))
+            return;
+          job = null;
+          materials = [];
+          blinds = [];
+          save(KEYS.job, job);
+          save(KEYS.materials, materials);
+          save(KEYS.blinds, blinds);
+          $("#results").classList.add("hidden");
+          renderMaterials();
+          renderJob();
+          renderStatus();
+          applyJobState();
+          setMatFormMode("new");
+          setTab("settings");
+        });
+
+        // Job table CRUD
+        const blindsTbody = $("#blinds-tbody");
+
+        const renderJob = () => {
+          const empty = $("#job-empty"),
+            wrap = $("#job-table-wrap");
+          if (!blindsTbody) return;
+          blindsTbody.innerHTML = "";
+          if (!job) {
+            empty?.classList.add("hidden");
+            wrap?.classList.add("hidden");
+            return;
+          }
+
+          if (!blinds.length) {
+            empty?.classList.remove("hidden");
+            wrap?.classList.add("hidden");
+            return;
+          }
+          empty?.classList.add("hidden");
+          wrap?.classList.remove("hidden");
+
+          const options = materials
+            .map((m) => {
+              const setLen = (toInt(m.meshMm) || 0) + (toInt(m.solidMm) || 0);
+              return `<option value="${m.id}">${esc(m.name)} (set ${setLen})</option>`;
+            })
+            .join("");
+
+          blinds.forEach((b, idx) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+        <td data-label="Blind no."><input inputmode="text" data-field="blindNo" data-id="${b.id}" value="${esc(b.blindNo || "")}" placeholder="e.g., 7"></td>
+        <td data-label="Width (mm)"><input inputmode="numeric" data-field="widthMm" data-id="${b.id}" value="${Number.isFinite(b.widthMm) ? b.widthMm : ""}" placeholder="e.g., 1000"></td>
+        <td data-label="Drop (mm)"><input inputmode="numeric" data-field="dropMm" data-id="${b.id}" value="${Number.isFinite(b.dropMm) ? b.dropMm : ""}" placeholder="e.g., 1200"></td>
+        <td data-label="Material">
+          ${materials.length ? `<select data-field="materialId" data-id="${b.id}">${options}</select>` : `<div class="err">No materials. Add one in Settings.</div>`}
+        </td>
+        <td data-label="Actions">
+          <div class="actions">
+            <button class="btn small" data-action="dup-blind" data-id="${b.id}" type="button">Duplicate</button>
+            <button class="btn small danger" data-action="del-blind" data-id="${b.id}" type="button">Delete</button>
+          </div>
+          <div class="hint" style="margin-top:6px;">Row ${idx + 1}</div>
+        </td>
+        `;
+            blindsTbody.appendChild(tr);
+            const sel = tr.querySelector('select[data-field="materialId"]');
+            if (sel) sel.value = b.materialId || materials[0]?.id || "";
+          });
+        };
+
+        blindsTbody?.addEventListener("input", (e) => {
+          const el = e.target;
+          const id = el?.dataset?.id,
+            field = el?.dataset?.field;
+          if (!id || !field) return;
+          const i = blinds.findIndex((b) => b.id === id);
+          if (i < 0) return;
+
+          if (field === "materialId") blinds[i].materialId = el.value;
+          else if (field === "blindNo") blinds[i].blindNo = el.value;
+          else blinds[i][field] = toInt(el.value);
+
+          save(KEYS.blinds, blinds);
+        });
+
+        blindsTbody?.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-action]");
+          if (!btn) return;
+          const action = btn.dataset.action,
+            id = btn.dataset.id;
+          const i = blinds.findIndex((b) => b.id === id);
+          if (i < 0) return;
+
+          if (action === "del-blind") {
+            blinds.splice(i, 1);
+            save(KEYS.blinds, blinds);
+            $("#results").classList.add("hidden");
+            renderJob();
+            renderStatus();
+            applyJobState();
+          }
+          if (action === "dup-blind") {
+            const src = blinds[i];
+            const defaultMat = materials[0]?.id || "";
+            blinds.push({
+              id: uid(),
+              blindNo: src.blindNo || "",
+              widthMm: src.widthMm,
+              dropMm: src.dropMm,
+              materialId: src.materialId || defaultMat,
+            });
+            save(KEYS.blinds, blinds);
+            $("#results").classList.add("hidden");
+            renderJob();
+            renderStatus();
+            applyJobState();
+          }
+        });
+
+        // Calculations
+        const calcForBlind = (b) => {
+          const material = materials.find((m) => m.id === b.materialId);
+          const blindNo = (b.blindNo ?? "").trim();
+          const width = toInt(b.widthMm),
+            drop = toInt(b.dropMm);
+          const issues = [];
+
+          if (!Number.isFinite(width) || width <= 0)
+            issues.push("Width is missing or invalid.");
+          if (!Number.isFinite(drop) || drop <= 0)
+            issues.push("Drop is missing or invalid.");
+          if (!material) issues.push("Material is missing or invalid.");
+
+          if (issues.length) return { issues, blindNo, width, drop, material };
+
+          const mesh = toInt(material.meshMm),
+            solid = toInt(material.solidMm),
+            minus = toInt(material.l2MinusMm);
+          const setLen = mesh + solid;
+
+          const pole = width - 45;
+          const totalLen = drop * 2 + 350;
+          const l2 = drop - minus;
+
+          if (pole <= 0) issues.push("Pole size is <= 0; check width.");
+          if (l2 < 0) issues.push("L2 is negative; check drop or minus value.");
+
+          const fullSets = setLen > 0 ? Math.floor(l2 / setLen) : NaN;
+          const remainder = setLen > 0 ? l2 - fullSets * setLen : NaN;
+
+          let within = "";
+          if (Number.isFinite(remainder) && remainder >= 0) {
+            if (remainder < mesh) within = `${remainder} mm into Mesh`;
+            else if (remainder === mesh)
+              within = "Exactly at Solid start (mesh boundary)";
+            else within = `${remainder - mesh} mm into Solid`;
+          }
 
           return {
-            totalShifts,
-            totalWage,
-            totalDelivery,
-            totalCombined,
-            totalMiles,
+            issues,
+            blindNo,
+            width,
+            drop,
+            pole,
+            material,
+            mesh,
+            solid,
+            minus,
+            setLen,
+            totalLen,
+            l2,
+            fullSets,
+            remainder,
+            within,
           };
         };
 
-        const stats = calculateStats(filtered);
+        const buildPrintHtml = (rows) => {
+          const title = job?.name ? esc(job.name) : "Job";
+          const today = new Date();
+          const dateStr = today.toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+          });
 
-        const handleRemoveFilters = () => {
-          setStartDate("");
-          setEndDate("");
-          setFiltered(history); // Show all records again
+          const tr = rows
+            .map(
+              (r) => `
+      <tr>
+        <td>${esc(r.blindNo || "")}</td>
+        <td style="text-align:right">${fmt(r.width)}</td>
+        <td style="text-align:right">${fmt(r.drop)}</td>
+        <td style="text-align:right">${fmt(r.pole)}</td>
+        <td style="text-align:right">${fmt(r.totalLen)}</td>
+        <td>${esc(r.within || "")}</td>
+        <td style="width:60px"></td>
+      </tr>
+    `,
+            )
+            .join("");
+
+          return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>Print — ${title}</title>
+<style>
+  body{font-family:Arial, Helvetica, sans-serif; color:#000; margin:24px;}
+  h1{font-size:18px; margin:0 0 6px;}
+  .meta{font-size:12px; margin:0 0 16px;}
+  table{width:100%; border-collapse:collapse; font-size:12px;}
+  th,td{border:1px solid #000; padding:8px 8px; vertical-align:top;}
+  th{background:#f2f2f2; text-align:left;}
+</style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="meta">Printed: ${dateStr}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Blind no.</th>
+        <th style="text-align:right">Width (mm)</th>
+        <th style="text-align:right">Drop (mm)</th>
+        <th style="text-align:right">Pole (mm)</th>
+        <th style="text-align:right">Total fabric (mm)</th>
+        <th>Into set</th>
+        <th>Complete</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tr}
+    </tbody>
+  </table>
+</body>
+</html>`;
         };
 
-        const labelStyle = {
-          display: "flex",
-          flexDirection: "column",
-          marginBottom: "1rem",
-          color: "#bbb",
-          fontSize: "1rem",
+        const printResults = () => {
+          const calculated = blinds.map(calcForBlind);
+          const okRows = calculated.filter(
+            (r) =>
+              r.material &&
+              !r.issues.some(
+                (x) => x.includes("missing") || x.includes("invalid"),
+              ),
+          );
+
+          const html = buildPrintHtml(okRows);
+
+          // Use an iframe to avoid pop-up blockers (especially on iOS Safari).
+          const iframe = document.createElement("iframe");
+          iframe.style.position = "fixed";
+          iframe.style.right = "0";
+          iframe.style.bottom = "0";
+          iframe.style.width = "0";
+          iframe.style.height = "0";
+          iframe.style.border = "0";
+          iframe.style.opacity = "0";
+          iframe.setAttribute("aria-hidden", "true");
+          iframe.tabIndex = -1;
+
+          document.body.appendChild(iframe);
+
+          const cleanup = () => {
+            try {
+              iframe.remove();
+            } catch {
+              /* noop */
+            }
+          };
+
+          try {
+            const doc =
+              iframe.contentDocument || iframe.contentWindow?.document;
+            if (!doc) {
+              cleanup();
+              alert(
+                "Printing is not available in this browser. Please try again or use desktop.",
+              );
+              return;
+            }
+
+            doc.open();
+            doc.write(html);
+            doc.close();
+
+            // Give the browser a moment to render the document before printing.
+            setTimeout(() => {
+              try {
+                const win = iframe.contentWindow;
+                if (!win) throw new Error("No print window");
+                win.focus();
+                win.print();
+              } catch (err) {
+                alert(
+                  "Printing was blocked. If you are on iPhone, try Safari and ensure pop-ups are allowed.",
+                );
+              } finally {
+                // Cleanup after a short delay to allow the print dialog to open.
+                setTimeout(cleanup, 500);
+              }
+            }, 250);
+          } catch (err) {
+            cleanup();
+            alert("Printing failed: " + (err?.message || err));
+          }
         };
 
-        const inputStyle = {
-          marginTop: "0.5rem",
-          padding: "0.75rem",
-          fontSize: "1rem",
-          borderRadius: "8px",
-          border: "none",
-          background: "#2c2c2e",
-          color: "white",
-        };
+        const renderResults = () => {
+          const resWrap = $("#results");
+          resWrap.innerHTML = "";
 
-        const textareaStyle = {
-          ...inputStyle,
-          minHeight: "100px",
-          resize: "vertical",
-        };
+          if (!job || !blinds.length) {
+            resWrap.classList.add("hidden");
+            return;
+          }
+          if (!materials.length) {
+            resWrap.classList.remove("hidden");
+            resWrap.innerHTML = `<div class="result-card"><div class="warn">Add at least one material in Settings to calculate.</div></div>`;
+            return;
+          }
 
-        const groupBoxStyle = {
-          background: "#3a3a3c",
-          borderRadius: "8px",
-          padding: "1rem",
-          marginBottom: "1rem",
-        };
+          const results = blinds.map(calcForBlind);
 
-        return (
-          <main style={{ padding: "1.5rem", paddingBottom: "80px" }}>
-            <h3 style={{ marginBottom: "1.25rem", textAlign: "center" }}>
-              Shift History
-            </h3>
+          results.forEach((r, idx) => {
+            const title = r.blindNo
+              ? `Blind No. ${esc(r.blindNo)}`
+              : `Blind ${idx + 1}`;
+            const matName = r.material ? r.material.name : "—";
+            const meta = `Width ${fmt(r.width)} • Drop ${fmt(r.drop)} • Material: ${esc(matName)}`;
+            const warnHtml = r.issues.length
+              ? `<div class="warn">${r.issues.map(esc).join(" ")}</div>`
+              : "";
 
-            {/* Filter Controls */}
-            <div
-              style={{
-                display: "flex",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                style={{
-                  flex: "1 1 140px",
-                  padding: "0.5rem",
-                  borderRadius: "8px",
-                  border: "none",
-                  minWidth: "140px",
-                }}
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                style={{
-                  flex: "1 1 140px",
-                  padding: "0.5rem",
-                  borderRadius: "8px",
-                  border: "none",
-                  minWidth: "140px",
-                }}
-              />
-              <button className="button" onClick={handleRemoveFilters}>
-                Remove Filters
-              </button>
+            const card = document.createElement("div");
+            card.className = "result-card";
+
+            if (!r.material) {
+              card.innerHTML = `<div class="result-top"><div><h3>${esc(title)}</h3><div class="result-meta">${meta}</div></div></div>${warnHtml}`;
+              resWrap.appendChild(card);
+              return;
+            }
+
+            card.innerHTML = `
+        <div class="result-top">
+          <div><h3>${esc(title)}</h3><div class="result-meta">${meta}</div></div>
+          <div class="pill"><strong>Set ${fmt(r.setLen)}</strong><span class="subpill">Mesh ${fmt(r.mesh)} / Solid ${fmt(r.solid)}</span></div>
+        </div>
+        <div class="kv">
+          <div class="k"><div class="lbl">Pole size</div><div class="val">${fmt(r.pole)} <small>mm</small></div></div>
+          <div class="k"><div class="lbl">Total fabric length</div><div class="val">${fmt(r.totalLen)} <small>mm</small></div></div>
+          <div class="k"><div class="lbl">L2 cut</div><div class="val">${fmt(r.l2)} <small>mm</small></div></div>
+          <div class="k"><div class="lbl">Full sets in L2</div><div class="val">${Number.isFinite(r.fullSets) ? r.fullSets : "—"} <small>sets</small>${Number.isFinite(r.fullSets) && Number.isFinite(r.setLen) ? ` <span class="muted" style="font-size:12px;font-weight:800;">(${fmt(r.fullSets * r.setLen)})</span>` : ""}</div></div>
+          <div class="k wide"><div class="lbl">Where L2 falls within a set (remainder)</div><div class="val">${fmt(r.remainder)} <small>mm</small> <span class="muted" style="font-size:12px;font-weight:800;">${esc(r.within || "")}</span></div></div>
+          <div class="k wide"><div class="lbl">Formula snapshot</div>
+            <div class="val" style="font-size:12px;font-weight:800;font-family:var(--mono);">
+              Pole = width−45; Total = drop×2+350; L2 = drop−${fmt(r.minus)}; remainder = L2 mod ${fmt(r.setLen)}
             </div>
+          </div>
+        </div>
+        ${warnHtml}
+      `;
+            resWrap.appendChild(card);
+          });
 
-            {/* Stats Panel Toggle */}
-            <button
-              className="button"
-              onClick={() => setShowStats((prev) => !prev)}
-              style={{ marginBottom: "1rem" }}
-            >
-              {showStats ? "Hide Stats" : "Show Stats"}
-            </button>
+          const footer = document.createElement("div");
+          footer.className = "result-card";
+          footer.style.gridColumn = "span 12";
+          footer.style.marginTop = "14px";
+          footer.innerHTML = `
+      <div class="card-hd">
+        <h3>Print</h3>
+        <span class="pill">Black &amp; white</span>
+      </div>
+      <div class="card-bd">
+        <div class="row">
+          <button class="btn primary" id="btn-print" type="button">Print results</button>
+          <span class="hint">Prints a simple table with the job title and a blank “Complete” column.</span>
+        </div>
+      </div>
+    `;
+          resWrap.appendChild(footer);
+          $("#btn-print").addEventListener("click", printResults);
 
-            {/* Stats Panel */}
-            {showStats && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.75rem",
-                  marginBottom: "1.5rem",
-                }}
-              >
-                {[
-                  { label: "Total Shifts", value: stats.totalShifts },
-                  {
-                    label: "Total Wage",
-                    value: `£${stats.totalWage.toFixed(2)}`,
-                  },
-                  {
-                    label: "Total Delivery Earnings",
-                    value: `£${stats.totalDelivery.toFixed(2)}`,
-                  },
-                  {
-                    label: "Total Combined Earnings",
-                    value: `£${stats.totalCombined.toFixed(2)}`,
-                  },
-                  {
-                    label: "Total Miles Driven",
-                    value: `${stats.totalMiles.toFixed(1)} mi`,
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      background: "#2c2c2e",
-                      borderRadius: "10px",
-                      padding: "1rem",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
-                    }}
-                  >
-                    <span style={{ fontWeight: "600", fontSize: "1rem" }}>
-                      {item.label}
-                    </span>
-                    <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+          resWrap.classList.remove("hidden");
+          resWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+        };
 
-            {/* Shift Records */}
-            {filtered.length === 0 ? (
-              <p>No shifts found for the selected range.</p>
-            ) : (
-              filtered.map((shift, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: "#2c2c2e",
-                    borderRadius: "10px",
-                    padding: "1.25rem",
-                    marginBottom: "1.25rem",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  {/* Date & Time */}
-                  <div
-                    style={{
-                      marginBottom: "0.5rem",
-                      borderBottom: "1px solid #444",
-                      paddingBottom: "0.5rem",
-                    }}
-                  >
-                    <strong>Date:</strong> {formatDate(shift.startTime)}
-                    <br />
-                    <strong>Start:</strong> {formatTime(shift.startTime)}
-                    <br />
-                    <strong>End:</strong> {formatTime(shift.endTime)}
-                  </div>
+        $("#btn-calc")?.addEventListener("click", () => {
+          if (!job) {
+            alert("Create a job first.");
+            return;
+          }
+          if (!materials.length) {
+            alert("Add at least one material in Settings first.");
+            setTab("settings");
+            return;
+          }
+          renderResults();
+        });
 
-                  {/* Delivery Counts */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    <div>
-                      <strong>Standard:</strong>
-                      <br />
-                      {shift.standard}
-                    </div>
-                    <div>
-                      <strong>Extra:</strong>
-                      <br />
-                      {shift.extra}
-                    </div>
-                    <div>
-                      <strong>Additional:</strong>
-                      <br />
-                      {shift.additional}
-                    </div>
-                  </div>
-
-                  {/* Earnings */}
-                  <div
-                    style={{
-                      background: "#1f1f1f",
-                      borderRadius: "8px",
-                      padding: "0.75rem",
-                      marginBottom: "0.75rem",
-                    }}
-                  >
-                    <strong>Wage:</strong> £
-                    {(
-                      parseFloat(shift.earned) - deliveryEarnings(shift)
-                    ).toFixed(2)}
-                    <br />
-                    <strong>Delivery:</strong> £
-                    {deliveryEarnings(shift).toFixed(2)}
-                    <br />
-                    <strong>Total:</strong>{" "}
-                    <span style={{ color: "lightgreen", fontWeight: "bold" }}>
-                      £{shift.earned}
-                    </span>
-                  </div>
-
-                  {/* Miles & Notes */}
-                  {shift.miles && (
-                    <div style={{ marginBottom: "0.5rem" }}>
-                      <strong>Miles Driven:</strong> {shift.miles}
-                    </div>
-                  )}
-                  {shift.notes && (
-                    <div
-                      style={{
-                        fontStyle: "italic",
-                        color: "#ccc",
-                        wordWrap: "break-word",
-                        overflowWrap: "break-word",
-                        whiteSpace: "pre-wrap",
-                        maxWidth: "100%",
-                      }}
-                    >
-                      <strong>Notes:</strong> {shift.notes}
-                    </div>
-                  )}
-                  {/* Display settings for this shift if present */}
-                  {shift.settings && (
-                    <div style={{ marginTop: "0.5rem", fontSize: "0.96rem" }}>
-                      <div>
-                        <strong>Hourly Rate:</strong> £
-                        {shift.settings.hourlyRate}
-                        <br />
-                        <strong>Per Delivery:</strong> £
-                        {shift.settings.perDelivery}
-                        <br />
-                        <strong>Per Extra:</strong> £{shift.settings.perExtra}
-                        <br />
-                        <strong>Per Additional:</strong> £
-                        {shift.settings.perAdditional}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div
-                    style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}
-                  >
-                    <button
-                      className="button"
-                      onClick={() => handleUpdateRecord(shift)}
-                      style={{ backgroundColor: "#0a84ff" }}
-                    >
-                      Update
-                    </button>
-                    <button
-                      className="button danger"
-                      onClick={() => handleDeleteRecord(shift)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-
-            {editShift && (
-              <div className="modal">
-                <div
-                  className="modal-content"
-                  style={{
-                    maxWidth: "360px",
-                    padding: "1.25rem",
-                    background: "linear-gradient(145deg, #2c2c2e, #1f1f1f)",
-                    borderRadius: "12px",
-                    color: "#fff",
-                    boxShadow: "0 6px 16px rgba(0,0,0,0.6)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                    border: "1px solid #3a3a3c",
-                  }}
-                >
-                  <h3
-                    style={{
-                      textAlign: "center",
-                      margin: "0 0 0.75rem",
-                      fontSize: "1.2rem",
-                      color: "#4dc3ff",
-                      fontWeight: "600",
-                    }}
-                  >
-                    Edit Shift
-                  </h3>
-                  {/* Start Time */}
-                  <label
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#ddd",
-                      marginBottom: "0.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    Start Time:
-                    <input
-                      type="datetime-local"
-                      value={editShift.startTime.slice(0, 16)}
-                      onChange={(e) =>
-                        setEditShift({
-                          ...editShift,
-                          startTime: e.target.value,
-                        })
-                      }
-                      style={{
-                        padding: "0.5rem",
-                        fontSize: "0.9rem",
-                        borderRadius: "6px",
-                        border: "1px solid #444",
-                        background: "#1c1c1e",
-                        color: "#fff",
-                        width: "100%",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </label>
-                  {/* Divider */}
-                  <div
-                    style={{
-                      borderBottom: "1px solid #333",
-                      margin: "0.25rem 0",
-                    }}
-                  />
-                  {/* End Time */}
-                  <label
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#ddd",
-                      marginBottom: "0.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    End Time:
-                    <input
-                      type="datetime-local"
-                      value={editShift.endTime.slice(0, 16)}
-                      onChange={(e) =>
-                        setEditShift({ ...editShift, endTime: e.target.value })
-                      }
-                      style={{
-                        padding: "0.5rem",
-                        fontSize: "0.9rem",
-                        borderRadius: "6px",
-                        border: "1px solid #444",
-                        background: "#1c1c1e",
-                        color: "#fff",
-                        width: "100%",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </label>
-                  {/* Divider */}
-                  <div
-                    style={{
-                      borderBottom: "1px solid #333",
-                      margin: "0.25rem 0",
-                    }}
-                  />
-                  {/* Deliveries Group - Card Layout */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.75rem",
-                      justifyContent: "space-between",
-                      marginBottom: "0.5rem",
-                    }}
-                  >
-                    {/* Standard */}
-                    <div
-                      style={{
-                        flex: "1 1 30%",
-                        background: "#333",
-                        borderRadius: "10px",
-                        padding: "0.75rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                        boxShadow: "inset 0 0 5px rgba(0,0,0,0.5)",
-                      }}
-                    >
-                      <label
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#ddd",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.25rem",
-                        }}
-                      >
-                        Standard:
-                        <input
-                          type="number"
-                          value={editShift.standard}
-                          min="0"
-                          onChange={(e) =>
-                            setEditShift({
-                              ...editShift,
-                              standard: Number(e.target.value),
-                            })
-                          }
-                          style={{
-                            padding: "0.5rem",
-                            fontSize: "0.9rem",
-                            borderRadius: "6px",
-                            border: "1px solid #444",
-                            background: "#1c1c1e",
-                            color: "#fff",
-                            width: "100%",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </label>
-                    </div>
-                    {/* Extra */}
-                    <div
-                      style={{
-                        flex: "1 1 30%",
-                        background: "#333",
-                        borderRadius: "10px",
-                        padding: "0.75rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                        boxShadow: "inset 0 0 5px rgba(0,0,0,0.5)",
-                      }}
-                    >
-                      <label
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#ddd",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.25rem",
-                        }}
-                      >
-                        Extra:
-                        <input
-                          type="number"
-                          value={editShift.extra}
-                          min="0"
-                          onChange={(e) =>
-                            setEditShift({
-                              ...editShift,
-                              extra: Number(e.target.value),
-                            })
-                          }
-                          style={{
-                            padding: "0.5rem",
-                            fontSize: "0.9rem",
-                            borderRadius: "6px",
-                            border: "1px solid #444",
-                            background: "#1c1c1e",
-                            color: "#fff",
-                            width: "100%",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </label>
-                    </div>
-                    {/* Additional */}
-                    <div
-                      style={{
-                        flex: "1 1 30%",
-                        background: "#333",
-                        borderRadius: "10px",
-                        padding: "0.75rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                        boxShadow: "inset 0 0 5px rgba(0,0,0,0.5)",
-                      }}
-                    >
-                      <label
-                        style={{
-                          fontSize: "0.9rem",
-                          color: "#ddd",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.25rem",
-                        }}
-                      >
-                        Additional:
-                        <input
-                          type="number"
-                          value={editShift.additional}
-                          min="0"
-                          onChange={(e) =>
-                            setEditShift({
-                              ...editShift,
-                              additional: Number(e.target.value),
-                            })
-                          }
-                          style={{
-                            padding: "0.5rem",
-                            fontSize: "0.9rem",
-                            borderRadius: "6px",
-                            border: "1px solid #444",
-                            background: "#1c1c1e",
-                            color: "#fff",
-                            width: "100%",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                  {/* Divider */}
-                  <div
-                    style={{
-                      borderBottom: "1px solid #333",
-                      margin: "0.25rem 0",
-                    }}
-                  />
-                  {/* Miles */}
-                  <label
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#ddd",
-                      marginBottom: "0.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    Miles Driven:
-                    <input
-                      type="number"
-                      value={editShift.miles === "N/A" ? "" : editShift.miles}
-                      min="0"
-                      onChange={(e) =>
-                        setEditShift({
-                          ...editShift,
-                          miles: e.target.value,
-                        })
-                      }
-                      style={{
-                        padding: "0.5rem",
-                        fontSize: "0.9rem",
-                        borderRadius: "6px",
-                        border: "1px solid #444",
-                        background: "#1c1c1e",
-                        color: "#fff",
-                        width: "100%",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                  </label>
-                  {/* Divider */}
-                  <div
-                    style={{
-                      borderBottom: "1px solid #333",
-                      margin: "0.25rem 0",
-                    }}
-                  />
-                  {/* Notes */}
-                  <label
-                    style={{
-                      fontSize: "0.9rem",
-                      color: "#ddd",
-                      marginBottom: "0.25rem",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    Notes:
-                    <textarea
-                      value={editShift.notes}
-                      onChange={(e) =>
-                        setEditShift({
-                          ...editShift,
-                          notes: e.target.value,
-                        })
-                      }
-                      style={{
-                        padding: "0.5rem",
-                        fontSize: "0.9rem",
-                        borderRadius: "6px",
-                        border: "1px solid #444",
-                        background: "#1c1c1e",
-                        color: "#fff",
-                        width: "100%",
-                        boxSizing: "border-box",
-                        minHeight: "80px",
-                        resize: "vertical",
-                      }}
-                    />
-                  </label>
-                  {/* Action Buttons */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "0.75rem",
-                      marginTop: "0.25rem",
-                    }}
-                  >
-                    <button
-                      className="button"
-                      onClick={handleSaveEdit}
-                      style={{
-                        flex: 1,
-                        padding: "0.5rem",
-                        fontSize: "0.9rem",
-                        borderRadius: "6px",
-                        border: "none",
-                        cursor: "pointer",
-                        backgroundColor: "#0a84ff",
-                        color: "#fff",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      className="button"
-                      onClick={handleCancelEdit}
-                      style={{
-                        flex: 1,
-                        padding: "0.5rem",
-                        fontSize: "0.9rem",
-                        borderRadius: "6px",
-                        border: "none",
-                        cursor: "pointer",
-                        backgroundColor: "#ff3b30",
-                        color: "#fff",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <button
-              className="button"
-              onClick={() => setPage("home")}
-              style={{
-                position: "fixed",
-                bottom: "20px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                zIndex: "1000", // Ensures the button is above other content
-              }}
-            >
-              Back to Home
-            </button>
-          </main>
-        );
-      }
-
-      window.onload = function () {
-        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-      };
+        // Initial
+        renderMaterials();
+        renderJob();
+        renderStatus();
+        applyJobState();
+        setMatFormMode("new");
+        if (!materials.length) setTab("settings");
+        else setTab("job");
+      })();
     </script>
   </body>
 </html>
