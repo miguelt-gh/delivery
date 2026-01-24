@@ -1764,6 +1764,8 @@
           // IMPORTANT (mobile): call print synchronously from the click handler
           // to avoid losing the user gesture, which can be treated as “blocked”.
           try {
+            // Force layout flush so Safari has the print DOM fully realized.
+            void printArea.offsetHeight;
             window.print();
           } catch (err) {
             // If print fails, revert immediately.
@@ -1779,22 +1781,40 @@
         const cleanupPrintView = () => {
           if (!isPrinting) return;
           const printArea = $("#print-area");
-          isPrinting = false;
-          document.body.classList.remove("printing");
-          if (printArea) {
-            printArea.classList.add("hidden");
-            printArea.setAttribute("aria-hidden", "true");
-            // Clear markup to avoid stale prints next time.
-            printArea.innerHTML = "";
-          }
+
+          // Delay cleanup slightly to allow iOS to finish snapshotting when the user
+          // changes printer/options (Safari may re-render the preview).
+          setTimeout(() => {
+            // If we re-entered print mode, do nothing.
+            if (!isPrinting) return;
+
+            isPrinting = false;
+            document.body.classList.remove("printing");
+            if (printArea) {
+              printArea.classList.add("hidden");
+              printArea.setAttribute("aria-hidden", "true");
+              // IMPORTANT: do NOT clear innerHTML here; clearing can cause blank previews
+              // during iOS rescan. It will be replaced on the next print.
+            }
+          }, 500);
         };
 
-        // afterprint is not always reliable on iOS, so also clean up when the page
-        // becomes visible again after the print UI is dismissed.
+        // Prefer matchMedia('print') to detect print end; it's more reliable on iOS than afterprint.
+        const printMql = window.matchMedia ? window.matchMedia("print") : null;
+
+        if (printMql) {
+          const onPrintChange = (e) => {
+            // When leaving print mode, clean up.
+            if (!e.matches) cleanupPrintView();
+          };
+          // Safari versions vary on API support
+          if (printMql.addEventListener)
+            printMql.addEventListener("change", onPrintChange);
+          else if (printMql.addListener) printMql.addListener(onPrintChange);
+        }
+
+        // Keep afterprint as an additional signal where supported.
         window.addEventListener("afterprint", cleanupPrintView);
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") cleanupPrintView();
-        });
 
         const renderResults = () => {
           const resWrap = $("#results");
