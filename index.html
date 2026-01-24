@@ -968,6 +968,7 @@
         let materials = load(KEYS.materials, []);
         let blinds = load(KEYS.blinds, []);
         let job = load(KEYS.job, null); // {id,name,createdAt}
+        let isPrinting = false;
 
         // Tabs
         const tabJob = $("#tab-job"),
@@ -1649,37 +1650,47 @@
             return;
           }
 
+          // Build and show the in-page print view.
           printArea.innerHTML = buildPrintMarkup(okRows);
-
           document.body.classList.add("printing");
           printArea.classList.remove("hidden");
           printArea.setAttribute("aria-hidden", "false");
+          isPrinting = true;
 
-          const cleanup = () => {
+          // IMPORTANT (mobile): call print synchronously from the click handler
+          // to avoid losing the user gesture, which can be treated as “blocked”.
+          try {
+            window.print();
+          } catch (err) {
+            // If print fails, revert immediately.
+            isPrinting = false;
             document.body.classList.remove("printing");
             printArea.classList.add("hidden");
             printArea.setAttribute("aria-hidden", "true");
             printArea.innerHTML = "";
-            window.removeEventListener("afterprint", cleanup);
-          };
-
-          window.addEventListener("afterprint", cleanup);
-
-          // Ensure DOM paint before print (important on iOS)
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              try {
-                window.print();
-              } catch (err) {
-                cleanup();
-                alert("Printing failed. Please try again in Safari.");
-                return;
-              }
-              // Fallback cleanup: iOS sometimes doesn't fire afterprint
-              setTimeout(cleanup, 1500);
-            });
-          });
+            alert("Printing failed. Please try again in Safari.");
+          }
         };
+
+        const cleanupPrintView = () => {
+          if (!isPrinting) return;
+          const printArea = $("#print-area");
+          isPrinting = false;
+          document.body.classList.remove("printing");
+          if (printArea) {
+            printArea.classList.add("hidden");
+            printArea.setAttribute("aria-hidden", "true");
+            // Clear markup to avoid stale prints next time.
+            printArea.innerHTML = "";
+          }
+        };
+
+        // afterprint is not always reliable on iOS, so also clean up when the page
+        // becomes visible again after the print UI is dismissed.
+        window.addEventListener("afterprint", cleanupPrintView);
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") cleanupPrintView();
+        });
 
         const renderResults = () => {
           const resWrap = $("#results");
