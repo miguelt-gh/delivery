@@ -526,6 +526,47 @@
         display: none !important;
       }
       @media (max-width: 560px) {
+        /* Compact sizing row: Blind no. + Width + Drop on one line */
+        #job-table-wrap .col-blindno,
+        #job-table-wrap .col-width,
+        #job-table-wrap .col-drop {
+          display: none !important;
+        }
+        #job-table-wrap .col-compact {
+          display: flex !important;
+        }
+        #job-table-wrap .compact-inputs {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 8px;
+          width: 100%;
+        }
+        #job-table-wrap .compact-inputs input {
+          padding: 11px 10px;
+        }
+        #job-table-wrap .compact-inputs input::placeholder {
+          font-size: 12px;
+        }
+
+        /* In-field top labels for compact inputs */
+        #job-table-wrap .compact-field {
+          position: relative;
+        }
+        #job-table-wrap .compact-field label {
+          position: absolute;
+          top: 6px;
+          left: 10px;
+          font-size: 10px;
+          font-weight: 800;
+          color: var(--muted);
+          pointer-events: none;
+        }
+        #job-table-wrap .compact-field input {
+          padding-top: 20px;
+        }
+        #job-table-wrap .col-compact::before {
+          min-width: 78px;
+        }
         .app {
           padding-bottom: 120px;
         }
@@ -1486,9 +1527,26 @@
           blinds.forEach((b, idx) => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-        <td data-label="Blind no."><input inputmode="numeric" pattern="[0-9]*" data-field="blindNo" data-id="${b.id}" value="${esc(b.blindNo || "")}" placeholder="e.g., 7"></td>
-        <td data-label="Width (mm)"><input inputmode="numeric" data-field="widthMm" data-id="${b.id}" value="${Number.isFinite(b.widthMm) ? b.widthMm : ""}" placeholder="e.g., 1000"></td>
-        <td data-label="Drop (mm)"><input inputmode="numeric" data-field="dropMm" data-id="${b.id}" value="${Number.isFinite(b.dropMm) ? b.dropMm : ""}" placeholder="e.g., 1200"></td>
+        <td class="col-compact" data-label="Dimensions">
+          <div class="compact-inputs">
+            <div class="compact-field">
+              <label>No.</label>
+              <input inputmode="numeric" pattern="[0-9]*" data-field="blindNo" data-id="${b.id}" value="${esc(b.blindNo || "")}">
+            </div>
+            <div class="compact-field">
+              <label>Width</label>
+              <input inputmode="numeric" data-field="widthMm" data-id="${b.id}" value="${Number.isFinite(b.widthMm) ? b.widthMm : ""}">
+            </div>
+            <div class="compact-field">
+              <label>Drop</label>
+              <input inputmode="numeric" data-field="dropMm" data-id="${b.id}" value="${Number.isFinite(b.dropMm) ? b.dropMm : ""}">
+            </div>
+          </div>
+        </td>
+
+        <td class="col-blindno" data-label="Blind no."><input inputmode="numeric" pattern="[0-9]*" data-field="blindNo" data-id="${b.id}" value="${esc(b.blindNo || "")}" placeholder="e.g., 7"></td>
+        <td class="col-width" data-label="Width (mm)"><input inputmode="numeric" data-field="widthMm" data-id="${b.id}" value="${Number.isFinite(b.widthMm) ? b.widthMm : ""}" placeholder="e.g., 1000"></td>
+        <td class="col-drop" data-label="Drop (mm)"><input inputmode="numeric" data-field="dropMm" data-id="${b.id}" value="${Number.isFinite(b.dropMm) ? b.dropMm : ""}" placeholder="e.g., 1200"></td>
         <td data-label="Material">
           ${materials.length ? `<select data-field="materialId" data-id="${b.id}">${options}</select>` : `<div class="err">No materials. Add one in Settings.</div>`}
         </td>
