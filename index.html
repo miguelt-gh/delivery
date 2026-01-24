@@ -1779,27 +1779,35 @@
         };
 
         const cleanupPrintView = () => {
-          if (!isPrinting) return;
           const printArea = $("#print-area");
 
-          // Delay cleanup slightly to allow iOS to finish snapshotting when the user
-          // changes printer/options (Safari may re-render the preview).
-          setTimeout(() => {
-            // If we re-entered print mode, do nothing.
-            if (!isPrinting) return;
-
+          // If already cleaned up, nothing to do.
+          if (!document.body.classList.contains("printing")) {
             isPrinting = false;
+            if (printArea) {
+              printArea.classList.add("hidden");
+              printArea.setAttribute("aria-hidden", "true");
+            }
+            return;
+          }
+
+          // Mark as no longer printing immediately so multiple signals don't re-run.
+          isPrinting = false;
+
+          // Delay removing the print layout to avoid iOS blank previews when it re-snapshots
+          // during printer/option selection.
+          setTimeout(() => {
             document.body.classList.remove("printing");
             if (printArea) {
               printArea.classList.add("hidden");
               printArea.setAttribute("aria-hidden", "true");
-              // IMPORTANT: do NOT clear innerHTML here; clearing can cause blank previews
-              // during iOS rescan. It will be replaced on the next print.
+              // IMPORTANT: do NOT clear innerHTML here (prevents blank rescans on iOS).
             }
-          }, 500);
+          }, 1500);
         };
 
-        // Prefer matchMedia('print') to detect print end; it's more reliable on iOS than afterprint.
+        // Detect print end signals. iOS Safari can misfire afterprint early, so we prefer
+        // matchMedia('print') + visibility/focus when returning to the page.
         const printMql = window.matchMedia ? window.matchMedia("print") : null;
 
         if (printMql) {
@@ -1813,8 +1821,22 @@
           else if (printMql.addListener) printMql.addListener(onPrintChange);
         }
 
-        // Keep afterprint as an additional signal where supported.
-        window.addEventListener("afterprint", cleanupPrintView);
+        // When the print UI is dismissed, the page generally regains focus/visibility.
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") cleanupPrintView();
+        });
+        window.addEventListener("focus", () => cleanupPrintView());
+
+        // Fallback: if a browser fails to fire print-end signals, any tap after returning
+        // will restore the app layout.
+        document.addEventListener(
+          "pointerdown",
+          () => {
+            if (document.body.classList.contains("printing"))
+              cleanupPrintView();
+          },
+          { passive: true },
+        );
 
         const renderResults = () => {
           const resWrap = $("#results");
