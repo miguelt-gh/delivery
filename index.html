@@ -280,7 +280,7 @@
         background: rgba(11, 15, 20, 0.55);
         color: var(--text);
         outline: none;
-        font-size: 14px;
+        font-size: 16px;
       }
       input::placeholder {
         color: rgba(159, 176, 204, 0.55);
@@ -970,6 +970,34 @@
         let job = load(KEYS.job, null); // {id,name,createdAt}
         let isPrinting = false;
 
+        const digitsOnly = (s) => String(s ?? "").replace(/\D+/g, "");
+
+        const usedBlindNoSet = () =>
+          new Set(
+            blinds
+              .map((b) => digitsOnly(b.blindNo))
+              .filter((x) => x.length > 0),
+          );
+
+        const nextFreeBlindNo = (start) => {
+          let n = Number(start);
+          if (!Number.isFinite(n) || n <= 0) n = 1;
+          n = Math.trunc(n);
+          const used = usedBlindNoSet();
+          while (used.has(String(n))) n += 1;
+          return String(n);
+        };
+
+        const lastAddedBlindNo = () => {
+          // last added = last element in the blinds array (append order)
+          for (let i = blinds.length - 1; i >= 0; i--) {
+            const d = digitsOnly(blinds[i].blindNo);
+            const n = Number(d);
+            if (d && Number.isFinite(n) && n > 0) return n;
+          }
+          return NaN;
+        };
+
         // Tabs
         const tabJob = $("#tab-job"),
           tabSettings = $("#tab-settings");
@@ -1079,9 +1107,16 @@
             return;
           }
           const defaultMat = materials[0]?.id || "";
+          const proposed =
+            blinds.length === 0
+              ? 1
+              : Number.isFinite(lastAddedBlindNo())
+                ? lastAddedBlindNo() + 1
+                : 1;
+
           blinds.push({
             id: uid(),
-            blindNo: "",
+            blindNo: nextFreeBlindNo(proposed),
             widthMm: NaN,
             dropMm: NaN,
             materialId: defaultMat,
@@ -1450,7 +1485,7 @@
           blinds.forEach((b, idx) => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
-        <td data-label="Blind no."><input inputmode="text" data-field="blindNo" data-id="${b.id}" value="${esc(b.blindNo || "")}" placeholder="e.g., 7"></td>
+        <td data-label="Blind no."><input inputmode="numeric" pattern="[0-9]*" data-field="blindNo" data-id="${b.id}" value="${esc(b.blindNo || "")}" placeholder="e.g., 7"></td>
         <td data-label="Width (mm)"><input inputmode="numeric" data-field="widthMm" data-id="${b.id}" value="${Number.isFinite(b.widthMm) ? b.widthMm : ""}" placeholder="e.g., 1000"></td>
         <td data-label="Drop (mm)"><input inputmode="numeric" data-field="dropMm" data-id="${b.id}" value="${Number.isFinite(b.dropMm) ? b.dropMm : ""}" placeholder="e.g., 1200"></td>
         <td data-label="Material">
@@ -1479,8 +1514,11 @@
           if (i < 0) return;
 
           if (field === "materialId") blinds[i].materialId = el.value;
-          else if (field === "blindNo") blinds[i].blindNo = el.value;
-          else blinds[i][field] = toInt(el.value);
+          else if (field === "blindNo") {
+            const cleaned = digitsOnly(el.value);
+            if (el.value !== cleaned) el.value = cleaned;
+            blinds[i].blindNo = cleaned;
+          } else blinds[i][field] = toInt(el.value);
 
           save(KEYS.blinds, blinds);
         });
@@ -1504,9 +1542,16 @@
           if (action === "dup-blind") {
             const src = blinds[i];
             const defaultMat = materials[0]?.id || "";
+            const proposed =
+              blinds.length === 0
+                ? 1
+                : Number.isFinite(lastAddedBlindNo())
+                  ? lastAddedBlindNo() + 1
+                  : 1;
+
             blinds.push({
               id: uid(),
-              blindNo: src.blindNo || "",
+              blindNo: nextFreeBlindNo(proposed),
               widthMm: src.widthMm,
               dropMm: src.dropMm,
               materialId: src.materialId || defaultMat,
