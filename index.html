@@ -1039,6 +1039,13 @@
           }
           return NaN;
         };
+        const lastSelectedMaterialId = () => {
+          for (let i = blinds.length - 1; i >= 0; i--) {
+            const mid = String(blinds[i].materialId || "").trim();
+            if (mid) return mid;
+          }
+          return "";
+        };
 
         // Tabs
         const tabJob = $("#tab-job"),
@@ -1148,7 +1155,7 @@
             alert("Create a job first.");
             return;
           }
-          const defaultMat = materials[0]?.id || "";
+          const defaultMat = lastSelectedMaterialId() || materials[0]?.id || "";
           const proposed =
             blinds.length === 0
               ? 1
@@ -1600,7 +1607,11 @@
           }
           if (action === "dup-blind") {
             const src = blinds[i];
-            const defaultMat = materials[0]?.id || "";
+            const defaultMat =
+              src.materialId ||
+              lastSelectedMaterialId() ||
+              materials[0]?.id ||
+              "";
             const proposed =
               blinds.length === 0
                 ? 1
@@ -1695,6 +1706,9 @@
               (r) => `
 <tr>
   <td style="border:1px solid #000; padding:8px;">${esc(r.blindNo || "")}</td>
+  <td style="border:1px solid #000; padding:8px;">
+    ${r.material ? `${esc(r.material.name)}<br><span style="font-size:11px;">(${fmt(toInt(r.material.solidMm))} - ${fmt(toInt(r.material.meshMm))} - ${fmt(toInt(r.material.l2MinusMm))})</span>` : ""}
+  </td>
   <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.width)}</td>
   <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.drop)}</td>
   <td style="border:1px solid #000; padding:8px; text-align:right;">${fmt(r.pole)}</td>
@@ -1715,6 +1729,7 @@
     <thead>
       <tr>
         <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:left;">Blind no.</th>
+        <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:left;">Material</th>
         <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Width (mm)</th>
         <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Drop (mm)</th>
         <th style="border:1px solid #000; padding:8px; background:#f2f2f2; text-align:right;">Pole (mm)</th>
